@@ -15,12 +15,7 @@ export interface Product {
   emoji: string;
 }
 
-export type LaundryServiceId =
-  | "wash_fold"
-  | "wash_iron"
-  | "dry_clean"
-  | "iron_only"
-  | "delicates";
+export type LaundryServiceId = "wash" | "dry";
 
 export interface LaundryService {
   id: LaundryServiceId;
@@ -50,8 +45,8 @@ export interface OrderDetails {
   totalEUR: number;
   customer: {
     name: string;
+    email: string;
     phone: string;
-    dorm: string;
     building: string;
     room: string;
     notes?: string;

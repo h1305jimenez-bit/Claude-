@@ -62,7 +62,7 @@ export default function OrderConfirmationPage() {
     orderId: order.id,
   });
 
-  const location = `${order.customer.dorm} · Bldg ${order.customer.building} · Room ${order.customer.room}`;
+  const location = `Bldg ${order.customer.building} · Room ${order.customer.room}`;
 
   return (
     <div className="space-y-5 pb-8">
@@ -72,11 +72,14 @@ export default function OrderConfirmationPage() {
         <p className="text-sm text-white/80">
           Reference <span className="font-mono">{order.id}</span>
         </p>
+        <p className="mt-2 text-xs text-hec-gold-soft">
+          A confirmation email was sent to {order.customer.email}.
+        </p>
       </div>
 
       {order.status === "pending_payment" ? (
-        <section className="space-y-3 rounded-2xl border-2 border-[#0666EB] bg-white p-4 shadow-sm">
-          <h2 className="font-semibold text-[#0666EB]">Pay with Revolut</h2>
+        <section className="space-y-3 rounded-2xl border-2 border-revolut-blue bg-white p-4 shadow-card">
+          <h2 className="font-semibold text-revolut-blue">Pay with Revolut</h2>
           <p className="text-sm text-slate-600">
             Tap the button to open Revolut and pay{" "}
             <strong>{order.totalEUR.toFixed(2)} €</strong> to{" "}
@@ -87,34 +90,35 @@ export default function OrderConfirmationPage() {
             href={payUrl}
             target="_blank"
             rel="noreferrer"
-            className="block w-full rounded-full bg-[#0666EB] py-3 text-center text-sm font-semibold text-white shadow"
+            className="block w-full rounded-full bg-revolut-blue py-3 text-center text-sm font-semibold text-white shadow"
           >
             Open Revolut & pay {order.totalEUR.toFixed(2)} €
           </a>
           <button
             type="button"
             onClick={markAsPaid}
-            className="block w-full rounded-full border border-slate-200 py-3 text-sm font-medium text-slate-700"
+            className="block w-full rounded-full border border-hec-stone py-3 text-sm font-medium text-slate-700"
           >
             I've already paid
           </button>
           <p className="text-xs text-slate-500">
-            Note: once we confirm the payment, a HECien will be on the way to
-            deliver or pick up during your chosen slot.
+            Once we confirm the payment, a HECien will be on the way during
+            your chosen slot.
           </p>
         </section>
       ) : (
-        <section className="rounded-2xl bg-green-50 p-4 text-sm text-green-800">
+        <section className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
           ✅ Payment received. We'll text you on WhatsApp at{" "}
           <strong>{order.customer.phone}</strong> when the courier is on the
           way.
         </section>
       )}
 
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold">Details</h2>
+      <section className="rounded-2xl bg-white p-4 shadow-card">
+        <h2 className="mb-3 font-semibold text-hec-navy">Details</h2>
         <dl className="space-y-1 text-sm">
           <Info label="Name" value={order.customer.name} />
+          <Info label="Email" value={order.customer.email} />
           <Info label="Phone" value={order.customer.phone} />
           <Info label="Location" value={location} />
           <Info
@@ -127,9 +131,9 @@ export default function OrderConfirmationPage() {
         </dl>
       </section>
 
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold">Items</h2>
-        <ul className="divide-y divide-slate-100">
+      <section className="rounded-2xl bg-white p-4 shadow-card">
+        <h2 className="mb-3 font-semibold text-hec-navy">Items</h2>
+        <ul className="divide-y divide-hec-stone">
           {order.items.map((i) => (
             <li
               key={i.id}
@@ -146,7 +150,7 @@ export default function OrderConfirmationPage() {
             </li>
           ))}
         </ul>
-        <div className="mt-3 space-y-1 border-t pt-3 text-sm">
+        <div className="mt-3 space-y-1 border-t border-hec-stone pt-3 text-sm">
           <Row label="Subtotal" value={`${order.subtotalEUR.toFixed(2)} €`} />
           <Row
             label="Service fee"

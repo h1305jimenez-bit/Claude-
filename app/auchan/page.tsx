@@ -22,11 +22,12 @@ export default function AuchanPage() {
   }, [query, category]);
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4 pb-24">
       <div>
         <h1 className="text-xl font-bold text-hec-navy">Auchan groceries</h1>
         <p className="text-sm text-slate-600">
-          Selection of items from the Auchan Vélizy store.
+          From Auchan Supermarché Jouy-en-Josas (50 Av. Jean Jaurès — right
+          across from campus).
         </p>
       </div>
 
@@ -35,7 +36,7 @@ export default function AuchanPage() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search for a product..."
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:border-hec-navy focus:outline-none"
+        className="w-full rounded-xl border border-hec-stone bg-white px-4 py-3 text-sm shadow-card focus:border-hec-navy focus:outline-none"
       />
 
       <div className="-mx-4 overflow-x-auto px-4">
@@ -46,7 +47,7 @@ export default function AuchanPage() {
             className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${
               category === "all"
                 ? "bg-hec-navy text-white"
-                : "bg-white text-slate-600"
+                : "bg-white text-slate-600 border border-hec-stone"
             }`}
           >
             All
@@ -59,7 +60,7 @@ export default function AuchanPage() {
               className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 category === c.id
                   ? "bg-hec-navy text-white"
-                  : "bg-white text-slate-600"
+                  : "bg-white text-slate-600 border border-hec-stone"
               }`}
             >
               {c.emoji} {c.label}
@@ -80,7 +81,7 @@ export default function AuchanPage() {
       </div>
 
       {itemCount > 0 && (
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-4 shadow-lg">
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-hec-stone bg-white p-4 shadow-lg">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
             <div>
               <div className="text-xs text-slate-500">

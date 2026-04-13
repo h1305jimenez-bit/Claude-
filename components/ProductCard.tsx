@@ -9,13 +9,15 @@ export function ProductCard({ product }: { product: Product }) {
   const quantity = inCart?.quantity ?? 0;
 
   return (
-    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm">
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-hec-cream text-3xl">
+    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-card">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-hec-sand text-3xl">
         {product.emoji}
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          <div className="text-sm font-medium leading-tight">{product.name}</div>
+          <div className="text-sm font-medium leading-tight text-hec-ink">
+            {product.name}
+          </div>
           <div className="text-xs text-slate-500">{product.unit}</div>
         </div>
         <div className="mt-1 flex items-center justify-between">
@@ -45,7 +47,7 @@ export function ProductCard({ product }: { product: Product }) {
               <button
                 type="button"
                 onClick={() => updateQuantity(product.id, quantity - 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm active:scale-95"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-hec-ivory text-hec-navy text-sm active:scale-95"
                 aria-label="Remove one"
               >
                 −

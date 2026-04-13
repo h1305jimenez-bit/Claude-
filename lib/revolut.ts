@@ -11,7 +11,7 @@
  */
 
 export const REVOLUT_USERNAME =
-  process.env.NEXT_PUBLIC_REVOLUT_USERNAME || "hecdelivery";
+  process.env.NEXT_PUBLIC_REVOLUT_USERNAME || "hecparis2026";
 
 export function buildRevolutPayLink(params: {
   amountEUR: number;

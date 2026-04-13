@@ -1,8 +1,8 @@
 {
   "name": "hec-campus-delivery",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Web app for HEC Paris students: Auchan groceries and on-campus laundry service with Revolut payments",
+  "description": "Web app for HEC Paris students: Auchan Jouy-en-Josas groceries and on-campus laundry with @hec.edu login and Revolut payments",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,9 +10,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "jose": "5.9.2",
     "next": "14.2.5",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "resend": "4.0.0"
   },
   "devDependencies": {
     "@types/node": "20.14.10",

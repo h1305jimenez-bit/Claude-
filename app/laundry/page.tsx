@@ -16,17 +16,21 @@ export default function LaundryPage() {
       <div>
         <h1 className="text-xl font-bold text-hec-navy">Campus laundry</h1>
         <p className="text-sm text-slate-600">
-          We pick up at your dorm, wash everything and bring it back in 24–48 h.
+          Simple pricing per kg. We pick up at your dorm, wash and/or dry and
+          bring it back in 24–48 h.
         </p>
       </div>
 
-      <div className="rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
-        <p className="font-semibold">🧺 How pickup works</p>
+      <div className="rounded-2xl bg-hec-gold-soft/50 p-4 text-sm text-hec-ink">
+        <p className="font-semibold text-hec-navy">🧺 How it works</p>
         <ol className="mt-2 list-inside list-decimal space-y-1">
-          <li>Book a service here and choose a pickup slot.</li>
-          <li>Bag your laundry in your dorm — we weigh it on pickup.</li>
-          <li>Within 24–48 h we return it clean and folded.</li>
+          <li>Pick wash, dry, or both — add 1 per kg of laundry.</li>
+          <li>Bag it and tell us your building letter and room.</li>
+          <li>We weigh on pickup and return it folded within 24–48 h.</li>
         </ol>
+        <p className="mt-2 text-xs text-slate-600">
+          A 2.50 € service fee is added once at checkout.
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -36,11 +40,11 @@ export default function LaundryPage() {
       </div>
 
       {laundryCount > 0 && (
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-4 shadow-lg">
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-hec-stone bg-white p-4 shadow-lg">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
             <div>
               <div className="text-xs text-slate-500">
-                {laundryCount} {laundryCount === 1 ? "service" : "services"}
+                {laundryCount} kg booked
               </div>
               <div className="text-lg font-bold text-hec-navy">
                 {subtotalEUR.toFixed(2)} €

@@ -1,5 +1,12 @@
 import type { Product, Category } from "./types";
 
+/**
+ * Mock catalog curated for the Auchan Supermarché Jouy-en-Josas
+ * (50 Av. Jean Jaurès, 78350 Jouy-en-Josas — right in front of the HEC
+ * campus main entrance). Prices are typical supermarket prices and are
+ * rounded for clarity. Update this list whenever the real store
+ * inventory changes.
+ */
 export const CATEGORIES: { id: Category; label: string; emoji: string }[] = [
   { id: "pantry", label: "Pantry", emoji: "🥫" },
   { id: "fresh", label: "Fresh", emoji: "🥬" },
@@ -36,8 +43,6 @@ export const PRODUCTS: Product[] = [
   { id: "d-orange", name: "Tropicana orange juice 1L", category: "drinks", priceEUR: 3.5, unit: "bottle", emoji: "🧃" },
   { id: "d-coffee", name: "Carte Noire ground coffee 250g", category: "drinks", priceEUR: 4.9, unit: "pack", emoji: "☕" },
   { id: "d-tea", name: "Lipton English Breakfast tea x25", category: "drinks", priceEUR: 2.8, unit: "box", emoji: "🫖" },
-  { id: "d-beer", name: "Heineken 33cl x6", category: "drinks", priceEUR: 6.9, unit: "pack", emoji: "🍺" },
-  { id: "d-wine", name: "Côtes du Rhône red wine", category: "drinks", priceEUR: 7.5, unit: "bottle", emoji: "🍷" },
 
   // Snacks
   { id: "s-chips", name: "Lay's classic chips 150g", category: "snacks", priceEUR: 2.1, unit: "bag", emoji: "🍟" },
