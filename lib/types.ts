@@ -4,7 +4,15 @@ export type Category =
   | "drinks"
   | "snacks"
   | "household"
-  | "frozen";
+  | "frozen"
+  | "bakery"
+  | "meat"
+  | "international"
+  | "babycare"
+  | "health";
+
+/** Which Auchan store the product is available at. */
+export type Store = "jouy" | "saclay" | "both";
 
 export interface Product {
   id: string;
@@ -13,6 +21,10 @@ export interface Product {
   priceEUR: number;
   unit: string;
   emoji: string;
+  /** Optional product photo URL (Open Food Facts, Auchan CDN, etc.). */
+  imageUrl?: string;
+  /** Which store(s) stock this product. Defaults to "both". */
+  store?: Store;
 }
 
 export type LaundryServiceId = "wash" | "dry";
@@ -27,13 +39,16 @@ export interface LaundryService {
 }
 
 export interface CartItem {
-  kind: "product" | "laundry";
+  /** "product" = catalog item · "laundry" = laundry service · "custom" = free-text request */
+  kind: "product" | "laundry" | "custom";
   id: string;
   name: string;
   priceEUR: number;
   quantity: number;
   emoji: string;
   unit: string;
+  /** Free-text description for "custom" items. */
+  note?: string;
 }
 
 export interface OrderDetails {
