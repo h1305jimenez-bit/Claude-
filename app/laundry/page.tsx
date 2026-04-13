@@ -14,18 +14,18 @@ export default function LaundryPage() {
   return (
     <div className="space-y-4 pb-24">
       <div>
-        <h1 className="text-xl font-bold text-hec-navy">Lavandería campus</h1>
+        <h1 className="text-xl font-bold text-hec-navy">Campus laundry</h1>
         <p className="text-sm text-slate-600">
-          Pasamos por tu dorm, lavamos y te devolvemos la ropa en 24–48 h.
+          We pick up at your dorm, wash everything and bring it back in 24–48 h.
         </p>
       </div>
 
       <div className="rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
-        <p className="font-semibold">🧺 ¿Cómo funciona la recogida?</p>
+        <p className="font-semibold">🧺 How pickup works</p>
         <ol className="mt-2 list-inside list-decimal space-y-1">
-          <li>Reserva aquí el servicio y elige franja horaria.</li>
-          <li>Prepara la bolsa en tu dorm — nosotros la pesamos al recoger.</li>
-          <li>En 24–48 h te devolvemos todo limpio y doblado.</li>
+          <li>Book a service here and choose a pickup slot.</li>
+          <li>Bag your laundry in your dorm — we weigh it on pickup.</li>
+          <li>Within 24–48 h we return it clean and folded.</li>
         </ol>
       </div>
 
@@ -40,7 +40,7 @@ export default function LaundryPage() {
           <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
             <div>
               <div className="text-xs text-slate-500">
-                {laundryCount} {laundryCount === 1 ? "servicio" : "servicios"}
+                {laundryCount} {laundryCount === 1 ? "service" : "services"}
               </div>
               <div className="text-lg font-bold text-hec-navy">
                 {subtotalEUR.toFixed(2)} €
@@ -50,7 +50,7 @@ export default function LaundryPage() {
               href="/cart"
               className="flex-1 rounded-full bg-hec-navy py-3 text-center text-sm font-semibold text-white active:scale-[0.98]"
             >
-              Continuar
+              Continue
             </Link>
           </div>
         </div>

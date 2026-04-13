@@ -6,7 +6,7 @@ import { Header } from "@/components/Header";
 export const metadata: Metadata = {
   title: "HEC Campus Delivery",
   description:
-    "Pide tu despensa del Auchan o servicio de lavandería directo a tu dorm de HEC Paris. Pago vía Revolut.",
+    "Order Auchan groceries or book laundry service straight to your HEC Paris dorm. Pay with Revolut.",
   manifest: "/manifest.webmanifest",
 };
 
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body className="min-h-screen bg-hec-cream">
         <CartProvider>
           <Header />

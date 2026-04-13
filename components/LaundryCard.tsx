@@ -22,7 +22,7 @@ export function LaundryCard({ service }: { service: LaundryService }) {
             </span>
           </div>
           <p className="mt-1 text-sm text-slate-600">{service.description}</p>
-          <p className="mt-1 text-xs text-slate-500">Precio por {service.unit}</p>
+          <p className="mt-1 text-xs text-slate-500">Price per {service.unit}</p>
         </div>
       </div>
 
@@ -43,7 +43,7 @@ export function LaundryCard({ service }: { service: LaundryService }) {
             }
             className="rounded-full bg-hec-navy px-4 py-2 text-sm font-semibold text-white active:scale-95"
           >
-            Reservar
+            Book
           </button>
         ) : (
           <div className="flex items-center gap-3">

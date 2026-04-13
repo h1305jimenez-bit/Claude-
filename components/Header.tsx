@@ -15,7 +15,7 @@ export function Header() {
         <Link
           href="/cart"
           className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
-          aria-label="Carrito"
+          aria-label="Cart"
         >
           <span className="text-xl">🛒</span>
           {itemCount > 0 && (

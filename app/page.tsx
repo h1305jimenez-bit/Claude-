@@ -5,11 +5,11 @@ export default function HomePage() {
     <div className="space-y-6">
       <section className="rounded-3xl bg-hec-navy p-6 text-white">
         <h1 className="text-2xl font-bold leading-tight">
-          Hola HECien 👋
+          Hey HECien 👋
         </h1>
         <p className="mt-1 text-sm text-white/80">
-          Pide tu despensa al Auchan o solicita lavandería a domicilio en el
-          campus. Pago rápido por Revolut.
+          Order your groceries from Auchan or book laundry right to your dorm.
+          Fast Revolut checkout.
         </p>
       </section>
 
@@ -23,10 +23,10 @@ export default function HomePage() {
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-hec-navy">
-              Despensa Auchan
+              Auchan groceries
             </h2>
             <p className="text-sm text-slate-600">
-              Compra del supermercado entregada en tu dorm en menos de 2 h.
+              Supermarket shopping delivered to your dorm in under 2 h.
             </p>
           </div>
           <span className="text-xl text-slate-400">›</span>
@@ -41,10 +41,10 @@ export default function HomePage() {
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-hec-navy">
-              Lavandería en el campus
+              Campus laundry
             </h2>
             <p className="text-sm text-slate-600">
-              Pasamos a recoger tu ropa por el dorm. Lavado, secado y planchado.
+              We pick up your clothes at your dorm. Wash, dry and iron.
             </p>
           </div>
           <span className="text-xl text-slate-400">›</span>
@@ -52,16 +52,16 @@ export default function HomePage() {
       </section>
 
       <section className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-600">
-        <h3 className="mb-1 font-semibold text-slate-700">¿Cómo funciona?</h3>
+        <h3 className="mb-1 font-semibold text-slate-700">How it works</h3>
         <ol className="list-inside list-decimal space-y-1">
-          <li>Elige el servicio que necesitas.</li>
-          <li>Añade productos o selecciona lavandería.</li>
-          <li>Indica tu dorm y hora preferida.</li>
+          <li>Pick the service you need.</li>
+          <li>Add products or choose a laundry service.</li>
+          <li>Tell us your dorm, building letter and preferred time.</li>
           <li>
-            Paga con <span className="font-semibold text-[#0666EB]">Revolut</span>{" "}
-            en un clic.
+            Pay with <span className="font-semibold text-[#0666EB]">Revolut</span>{" "}
+            in one click.
           </li>
-          <li>Recibimos tu pedido y lo entregamos en tu puerta.</li>
+          <li>We pick it up and deliver to your door.</li>
         </ol>
       </section>
     </div>

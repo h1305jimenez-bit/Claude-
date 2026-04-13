@@ -1,7 +1,7 @@
 {
   "name": "HEC Campus Delivery",
   "short_name": "HEC Delivery",
-  "description": "Despensa del Auchan y lavandería a tu dorm en HEC Paris",
+  "description": "Auchan groceries and laundry delivered to your HEC Paris dorm",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FAF7F0",

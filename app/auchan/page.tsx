@@ -24,9 +24,9 @@ export default function AuchanPage() {
   return (
     <div className="space-y-4 pb-20">
       <div>
-        <h1 className="text-xl font-bold text-hec-navy">Despensa Auchan</h1>
+        <h1 className="text-xl font-bold text-hec-navy">Auchan groceries</h1>
         <p className="text-sm text-slate-600">
-          Selección de productos del Auchan de Vélizy.
+          Selection of items from the Auchan Vélizy store.
         </p>
       </div>
 
@@ -34,7 +34,7 @@ export default function AuchanPage() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar producto..."
+        placeholder="Search for a product..."
         className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:border-hec-navy focus:outline-none"
       />
 
@@ -49,7 +49,7 @@ export default function AuchanPage() {
                 : "bg-white text-slate-600"
             }`}
           >
-            Todo
+            All
           </button>
           {CATEGORIES.map((c) => (
             <button
@@ -74,7 +74,7 @@ export default function AuchanPage() {
         ))}
         {filtered.length === 0 && (
           <p className="py-8 text-center text-sm text-slate-500">
-            No encontramos productos con esos criterios.
+            No products match your search.
           </p>
         )}
       </div>
@@ -84,7 +84,7 @@ export default function AuchanPage() {
           <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
             <div>
               <div className="text-xs text-slate-500">
-                {itemCount} {itemCount === 1 ? "producto" : "productos"}
+                {itemCount} {itemCount === 1 ? "item" : "items"}
               </div>
               <div className="text-lg font-bold text-hec-navy">
                 {subtotalEUR.toFixed(2)} €
@@ -94,7 +94,7 @@ export default function AuchanPage() {
               href="/cart"
               className="flex-1 rounded-full bg-hec-navy py-3 text-center text-sm font-semibold text-white active:scale-[0.98]"
             >
-              Ir al carrito
+              Go to cart
             </Link>
           </div>
         </div>

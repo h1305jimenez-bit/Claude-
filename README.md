@@ -1,97 +1,98 @@
 # 🎓 HEC Campus Delivery
 
-App web (mobile-first) para estudiantes de **HEC Paris**. Permite:
+Mobile-first web app for **HEC Paris** students. It lets you:
 
-- 🛒 Pedir la despensa del **Auchan de Vélizy** y recibirla en tu dorm.
-- 🧺 Reservar servicio de **lavandería** con recogida en la habitación
-  (lavado, planchado, tintorería, prendas delicadas).
-- 💳 Pagar vía **Revolut** en un clic (enlace `revolut.me` con importe y
-  referencia precargados).
+- 🛒 Order groceries from **Auchan Vélizy** and get them dropped off at
+  your dorm.
+- 🧺 Book **laundry service** with pickup in your room (wash, iron, dry
+  clean, delicates).
+- 💳 Pay with **Revolut** in one tap (`revolut.me` link pre-filled with
+  the amount and order reference).
 
-Pensada para usarse desde el móvil — instalable como PWA (añadir a pantalla
-de inicio).
+Designed for phones — installable as a PWA (Add to Home Screen).
 
 ## Tech stack
 
 - [Next.js 14](https://nextjs.org/) (App Router)
 - TypeScript
 - Tailwind CSS
-- React Context + `localStorage` para carrito y pedidos
+- React Context + `localStorage` for cart and orders
 
-## Desarrollo local
+## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # ajusta NEXT_PUBLIC_REVOLUT_USERNAME
+cp .env.example .env.local   # set NEXT_PUBLIC_REVOLUT_USERNAME
 npm run dev
 ```
 
-Abre <http://localhost:3000>.
+Open <http://localhost:3000>.
 
-## Variables de entorno
+## Environment variables
 
-| Variable | Descripción |
+| Variable | Description |
 | -------- | ----------- |
-| `NEXT_PUBLIC_REVOLUT_USERNAME` | Usuario de Revolut.me (sin `@`) que recibe los pagos. |
+| `NEXT_PUBLIC_REVOLUT_USERNAME` | Your Revolut.me username (without `@`) that receives payments. |
 
-## Flujo del usuario
+## User flow
 
-1. **Home** – elige entre "Despensa Auchan" o "Lavandería".
-2. **Catálogo** – añade productos o servicios al carrito.
-3. **Carrito** – indica nombre, dorm, habitación, teléfono y franja horaria.
-4. **Confirmación** – se genera un `HEC-XXXX` y un enlace Revolut ya
-   precargado con el importe y la referencia. El estudiante pulsa "Abrir
-   Revolut y pagar" y completa el pago desde la app oficial de Revolut.
-5. El operador marca el pedido como pagado en su panel (a implementar) y
-   gestiona la entrega/recogida.
+1. **Home** – pick "Auchan groceries" or "Campus laundry".
+2. **Catalog** – add items or services to the cart.
+3. **Cart** – enter name, residence, **building letter**, room number,
+   phone and a time slot.
+4. **Confirmation** – the app generates a `HEC-XXXX` reference and a
+   Revolut link pre-filled with the total and reference. The student
+   taps "Open Revolut & pay" and completes the payment inside the
+   Revolut app.
+5. The operator marks the order as paid in their dashboard (to be built)
+   and handles the delivery or pickup.
 
-## Cómo funciona el pago con Revolut
+## How the Revolut payment works
 
-Usamos **Revolut.me** (pay link público) porque:
+We use **Revolut.me** (public pay link) because:
 
-- No requiere cuenta Revolut Business.
-- No hay fricción para el estudiante: Revolut ya está instalado en casi
-  todos los móviles del campus.
-- Es instantáneo y sin comisión entre cuentas Revolut.
+- No Revolut Business account required to start.
+- Zero friction for the student: Revolut is already installed on almost
+  every phone on campus.
+- Instant, free between Revolut accounts.
 
-El enlace se genera así:
+The link is built like this:
 
 ```
-https://revolut.me/<usuario>?amount=<total>&currency=EUR&reference=<orderId>
+https://revolut.me/<username>?amount=<total>&currency=EUR&reference=<orderId>
 ```
 
-Cuando la operación crezca, se puede sustituir por la
-[Merchant API de Revolut](https://developer.revolut.com/docs/merchant/overview)
-(`POST /orders` + webhooks) para automatizar la conciliación.
+When volume grows, swap this for the
+[Revolut Merchant API](https://developer.revolut.com/docs/merchant/overview)
+(`POST /orders` + webhooks) to automate reconciliation.
 
-## Roadmap sugerido
+## Suggested roadmap
 
-- [ ] Backend con base de datos (Supabase / Postgres) y dashboard operador.
-- [ ] Notificaciones por WhatsApp (Twilio) al crear pedido y al entregar.
-- [ ] Merchant API de Revolut con webhooks de confirmación automática.
-- [ ] Panel para repartidores con pedidos en ruta.
-- [ ] Inicio de sesión con email `@hec.edu` para limitar el acceso a la
-      comunidad HEC.
-- [ ] Programa de referidos y créditos.
+- [ ] Backend with a real DB (Supabase / Postgres) and operator dashboard.
+- [ ] WhatsApp notifications (Twilio) on new orders and delivery updates.
+- [ ] Revolut Merchant API with webhooks for automatic payment confirmation.
+- [ ] Courier panel for in-route orders.
+- [ ] `@hec.edu` email sign-in to keep the app student-only.
+- [ ] Referral program and credits.
 
-## Estructura del proyecto
+## Project structure
 
 ```
 app/
-  layout.tsx              Layout raíz + cabecera + CartProvider
-  page.tsx                Home con selección de servicio
-  auchan/page.tsx         Catálogo de productos del Auchan
-  laundry/page.tsx        Servicios de lavandería
-  cart/page.tsx           Carrito + formulario de entrega
-  orders/[id]/page.tsx    Confirmación + botón de pago Revolut
+  layout.tsx              Root layout + header + CartProvider
+  page.tsx                Home with service picker
+  auchan/page.tsx         Auchan product catalog
+  laundry/page.tsx        Laundry services
+  cart/page.tsx           Cart + delivery form (incl. building letter)
+  orders/[id]/page.tsx    Confirmation + Revolut pay button
 components/
-  CartProvider.tsx        Contexto de carrito con persistencia
-  Header.tsx              Cabecera con contador del carrito
-  ProductCard.tsx         Tarjeta de producto Auchan
-  LaundryCard.tsx         Tarjeta de servicio de lavandería
+  CartProvider.tsx        Cart context with localStorage persistence
+  Header.tsx              Header with cart badge
+  ProductCard.tsx         Auchan product card
+  LaundryCard.tsx         Laundry service card
 lib/
-  products.ts             Catálogo mock de Auchan
-  laundry.ts              Servicios de lavandería, dorms, horarios
-  revolut.ts              Generador de enlace de pago Revolut.me
-  types.ts                Tipos compartidos
+  products.ts             Auchan mock catalog
+  laundry.ts              Laundry services, dorms, pickup slots
+  revolut.ts              Revolut.me pay link builder
+  types.ts                Shared types
 ```

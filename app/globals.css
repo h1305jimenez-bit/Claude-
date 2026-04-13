@@ -14,12 +14,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Mejoras para móvil */
+/* Mobile tweaks */
 input,
 select,
 textarea,
 button {
-  font-size: 16px; /* evita zoom automático en iOS */
+  font-size: 16px; /* prevents iOS auto-zoom on focus */
 }
 
 .safe-bottom {

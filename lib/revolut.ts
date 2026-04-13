@@ -1,13 +1,13 @@
 /**
- * Generador de enlaces de pago con Revolut.
+ * Revolut payment link generator.
  *
- * Usamos Revolut.me (el enlace público "Pay me" que todo usuario de Revolut
- * tiene) porque es la manera más simple de aceptar pagos sin una cuenta
- * Revolut Business ni registrar un comercio en Stripe/Checkout.
+ * We use Revolut.me (the public "Pay me" link every Revolut user has)
+ * because it's the simplest way to accept payments without a Revolut
+ * Business account or a Stripe/Checkout merchant setup.
  *
- * El estudiante abre el enlace en su móvil y Revolut rellena automáticamente
- * el importe. Cuando se tenga cuenta Business, se puede sustituir esta
- * función por una llamada a la Merchant API de Revolut (/orders).
+ * The student opens the link on their phone and Revolut auto-fills the
+ * amount. Once the operation has a Business account, replace this
+ * function with a call to Revolut's Merchant API (/orders).
  */
 
 export const REVOLUT_USERNAME =

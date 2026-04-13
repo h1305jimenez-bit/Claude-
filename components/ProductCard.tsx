@@ -38,7 +38,7 @@ export function ProductCard({ product }: { product: Product }) {
               }
               className="rounded-full bg-hec-navy px-3 py-1 text-xs font-semibold text-white active:scale-95"
             >
-              Añadir
+              Add
             </button>
           ) : (
             <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export function ProductCard({ product }: { product: Product }) {
                 type="button"
                 onClick={() => updateQuantity(product.id, quantity - 1)}
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm active:scale-95"
-                aria-label="Quitar uno"
+                aria-label="Remove one"
               >
                 −
               </button>
@@ -57,7 +57,7 @@ export function ProductCard({ product }: { product: Product }) {
                 type="button"
                 onClick={() => updateQuantity(product.id, quantity + 1)}
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-hec-navy text-sm text-white active:scale-95"
-                aria-label="Añadir uno"
+                aria-label="Add one"
               >
                 +
               </button>

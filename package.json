@@ -2,7 +2,7 @@
   "name": "hec-campus-delivery",
   "version": "0.1.0",
   "private": true,
-  "description": "App para estudiantes de HEC Paris: pedidos al Auchan y servicio de lavandería con pago por Revolut",
+  "description": "Web app for HEC Paris students: Auchan groceries and on-campus laundry service with Revolut payments",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

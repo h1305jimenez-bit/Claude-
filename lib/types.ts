@@ -52,6 +52,7 @@ export interface OrderDetails {
     name: string;
     phone: string;
     dorm: string;
+    building: string;
     room: string;
     notes?: string;
     slot: string;

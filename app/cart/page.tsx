@@ -16,6 +16,7 @@ export default function CartPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [dorm, setDorm] = useState(HEC_DORMS[0]);
+  const [building, setBuilding] = useState("");
   const [room, setRoom] = useState("");
   const [slot, setSlot] = useState(PICKUP_SLOTS[0]);
   const [notes, setNotes] = useState("");
@@ -32,7 +33,11 @@ export default function CartPage() {
   const totalEUR = useMemo(() => subtotalEUR + serviceFeeEUR, [subtotalEUR, serviceFeeEUR]);
 
   const canCheckout =
-    items.length > 0 && name.trim() && phone.trim() && room.trim();
+    items.length > 0 &&
+    name.trim() &&
+    phone.trim() &&
+    building.trim() &&
+    room.trim();
 
   function handleCheckout() {
     if (!canCheckout) return;
@@ -48,6 +53,7 @@ export default function CartPage() {
         name: name.trim(),
         phone: phone.trim(),
         dorm,
+        building: building.trim().toUpperCase(),
         room: room.trim(),
         slot,
         notes: notes.trim() || undefined,
@@ -73,22 +79,22 @@ export default function CartPage() {
     return (
       <div className="py-16 text-center">
         <div className="text-5xl">🛒</div>
-        <h2 className="mt-4 text-lg font-semibold">Tu carrito está vacío</h2>
+        <h2 className="mt-4 text-lg font-semibold">Your cart is empty</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Echa un vistazo a nuestros servicios.
+          Take a look at our services.
         </p>
         <div className="mt-6 flex flex-col gap-2">
           <Link
             href="/auchan"
             className="rounded-full bg-hec-navy py-3 font-semibold text-white"
           >
-            Ir a Auchan
+            Go to Auchan
           </Link>
           <Link
             href="/laundry"
             className="rounded-full border border-hec-navy py-3 font-semibold text-hec-navy"
           >
-            Reservar lavandería
+            Book laundry
           </Link>
         </div>
       </div>
@@ -97,7 +103,7 @@ export default function CartPage() {
 
   return (
     <div className="space-y-5 pb-8">
-      <h1 className="text-xl font-bold text-hec-navy">Tu pedido</h1>
+      <h1 className="text-xl font-bold text-hec-navy">Your order</h1>
 
       <section className="space-y-2">
         {items.map((i) => (
@@ -136,7 +142,7 @@ export default function CartPage() {
                 type="button"
                 onClick={() => removeItem(i.id)}
                 className="ml-1 text-slate-400"
-                aria-label="Eliminar"
+                aria-label="Remove"
               >
                 ✕
               </button>
@@ -146,16 +152,16 @@ export default function CartPage() {
       </section>
 
       <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Datos de entrega</h2>
-        <Field label="Nombre completo">
+        <h2 className="font-semibold">Delivery details</h2>
+        <Field label="Full name">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Paula Martín"
+            placeholder="e.g. Paula Martin"
             className="input"
           />
         </Field>
-        <Field label="Teléfono móvil">
+        <Field label="Mobile phone">
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -164,23 +170,32 @@ export default function CartPage() {
             className="input"
           />
         </Field>
+        <Field label="Residence">
+          <select
+            value={dorm}
+            onChange={(e) => setDorm(e.target.value)}
+            className="input"
+          >
+            {HEC_DORMS.map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
+        </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Dorm / residencia">
-            <select
-              value={dorm}
-              onChange={(e) => setDorm(e.target.value)}
-              className="input"
-            >
-              {HEC_DORMS.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
+          <Field label="Building letter">
+            <input
+              value={building}
+              onChange={(e) => setBuilding(e.target.value.toUpperCase())}
+              placeholder="e.g. A"
+              maxLength={3}
+              className="input uppercase"
+            />
           </Field>
-          <Field label="Número de habitación">
+          <Field label="Room number">
             <input
               value={room}
               onChange={(e) => setRoom(e.target.value)}
-              placeholder="Ej. 214"
+              placeholder="e.g. 214"
               className="input"
             />
           </Field>
@@ -188,8 +203,8 @@ export default function CartPage() {
         <Field
           label={
             hasLaundry
-              ? "Franja de recogida de ropa"
-              : "Franja de entrega"
+              ? "Laundry pickup slot"
+              : "Delivery slot"
           }
         >
           <select
@@ -202,11 +217,11 @@ export default function CartPage() {
             ))}
           </select>
         </Field>
-        <Field label="Notas (opcional)">
+        <Field label="Notes (optional)">
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Código de puerta, instrucciones, etc."
+            placeholder="Door code, instructions, etc."
             rows={2}
             className="input"
           />
@@ -216,7 +231,7 @@ export default function CartPage() {
       <section className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
         <Row label="Subtotal" value={`${subtotalEUR.toFixed(2)} €`} />
         <Row
-          label="Tarifa de servicio"
+          label="Service fee"
           value={`${serviceFeeEUR.toFixed(2)} €`}
         />
         <div className="mt-2 border-t pt-2">
@@ -237,7 +252,7 @@ export default function CartPage() {
         disabled={!canCheckout}
         className="w-full rounded-full bg-[#0666EB] py-4 text-sm font-semibold text-white shadow-lg active:scale-[0.99] disabled:opacity-50"
       >
-        Confirmar y pagar con Revolut
+        Confirm & pay with Revolut
       </button>
 
       <style jsx>{`

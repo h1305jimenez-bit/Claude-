@@ -43,9 +43,9 @@ export default function OrderConfirmationPage() {
   if (notFound) {
     return (
       <div className="py-16 text-center">
-        <h1 className="text-lg font-semibold">Pedido no encontrado</h1>
+        <h1 className="text-lg font-semibold">Order not found</h1>
         <Link href="/" className="mt-4 inline-block text-hec-navy underline">
-          Volver al inicio
+          Back to home
         </Link>
       </div>
     );
@@ -53,7 +53,7 @@ export default function OrderConfirmationPage() {
 
   if (!order) {
     return (
-      <div className="py-16 text-center text-slate-500">Cargando pedido...</div>
+      <div className="py-16 text-center text-slate-500">Loading order...</div>
     );
   }
 
@@ -62,24 +62,26 @@ export default function OrderConfirmationPage() {
     orderId: order.id,
   });
 
+  const location = `${order.customer.dorm} · Bldg ${order.customer.building} · Room ${order.customer.room}`;
+
   return (
     <div className="space-y-5 pb-8">
       <div className="rounded-3xl bg-hec-navy p-6 text-white">
         <div className="text-4xl">🎉</div>
-        <h1 className="mt-2 text-xl font-bold">¡Pedido creado!</h1>
+        <h1 className="mt-2 text-xl font-bold">Order placed!</h1>
         <p className="text-sm text-white/80">
-          Referencia <span className="font-mono">{order.id}</span>
+          Reference <span className="font-mono">{order.id}</span>
         </p>
       </div>
 
       {order.status === "pending_payment" ? (
         <section className="space-y-3 rounded-2xl border-2 border-[#0666EB] bg-white p-4 shadow-sm">
-          <h2 className="font-semibold text-[#0666EB]">Paga con Revolut</h2>
+          <h2 className="font-semibold text-[#0666EB]">Pay with Revolut</h2>
           <p className="text-sm text-slate-600">
-            Pulsa el botón para abrir Revolut y pagar{" "}
-            <strong>{order.totalEUR.toFixed(2)} €</strong> a{" "}
-            <span className="font-mono">@{REVOLUT_USERNAME}</span>. Usa la
-            referencia <span className="font-mono">{order.id}</span>.
+            Tap the button to open Revolut and pay{" "}
+            <strong>{order.totalEUR.toFixed(2)} €</strong> to{" "}
+            <span className="font-mono">@{REVOLUT_USERNAME}</span>. Use the
+            reference <span className="font-mono">{order.id}</span>.
           </p>
           <a
             href={payUrl}
@@ -87,49 +89,46 @@ export default function OrderConfirmationPage() {
             rel="noreferrer"
             className="block w-full rounded-full bg-[#0666EB] py-3 text-center text-sm font-semibold text-white shadow"
           >
-            Abrir Revolut y pagar {order.totalEUR.toFixed(2)} €
+            Open Revolut & pay {order.totalEUR.toFixed(2)} €
           </a>
           <button
             type="button"
             onClick={markAsPaid}
             className="block w-full rounded-full border border-slate-200 py-3 text-sm font-medium text-slate-700"
           >
-            Ya he pagado
+            I've already paid
           </button>
           <p className="text-xs text-slate-500">
-            Nota: en cuanto confirmemos el pago, un HECien pasará a entregar o
-            recoger en la franja elegida.
+            Note: once we confirm the payment, a HECien will be on the way to
+            deliver or pick up during your chosen slot.
           </p>
         </section>
       ) : (
         <section className="rounded-2xl bg-green-50 p-4 text-sm text-green-800">
-          ✅ Pago recibido. Te avisaremos por WhatsApp al{" "}
-          <strong>{order.customer.phone}</strong> cuando el repartidor esté en
-          camino.
+          ✅ Payment received. We'll text you on WhatsApp at{" "}
+          <strong>{order.customer.phone}</strong> when the courier is on the
+          way.
         </section>
       )}
 
       <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold">Detalles</h2>
+        <h2 className="mb-3 font-semibold">Details</h2>
         <dl className="space-y-1 text-sm">
-          <Info label="Nombre" value={order.customer.name} />
-          <Info label="Teléfono" value={order.customer.phone} />
+          <Info label="Name" value={order.customer.name} />
+          <Info label="Phone" value={order.customer.phone} />
+          <Info label="Location" value={location} />
           <Info
-            label="Dorm"
-            value={`${order.customer.dorm} · Hab. ${order.customer.room}`}
-          />
-          <Info
-            label={order.kind === "laundry" ? "Recogida" : "Entrega"}
+            label={order.kind === "laundry" ? "Pickup" : "Delivery"}
             value={order.customer.slot}
           />
           {order.customer.notes && (
-            <Info label="Notas" value={order.customer.notes} />
+            <Info label="Notes" value={order.customer.notes} />
           )}
         </dl>
       </section>
 
       <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold">Artículos</h2>
+        <h2 className="mb-3 font-semibold">Items</h2>
         <ul className="divide-y divide-slate-100">
           {order.items.map((i) => (
             <li
@@ -150,7 +149,7 @@ export default function OrderConfirmationPage() {
         <div className="mt-3 space-y-1 border-t pt-3 text-sm">
           <Row label="Subtotal" value={`${order.subtotalEUR.toFixed(2)} €`} />
           <Row
-            label="Tarifa de servicio"
+            label="Service fee"
             value={`${order.serviceFeeEUR.toFixed(2)} €`}
           />
           <Row
@@ -168,7 +167,7 @@ export default function OrderConfirmationPage() {
         href="/"
         className="block text-center text-sm text-slate-500 underline"
       >
-        Hacer otro pedido
+        Place another order
       </Link>
     </div>
   );
