@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIES, verifySessionToken } from "@/lib/auth";
-import { sendOrderConfirmationEmail } from "@/lib/email";
+import {
+  sendOperatorOrderEmail,
+  sendOrderConfirmationEmail,
+} from "@/lib/email";
+import { notifyOperator } from "@/lib/whatsapp";
+import { saveOrder } from "@/lib/orders-store";
 import type { OrderDetails } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -18,12 +23,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid order" }, { status: 400 });
   }
 
-  const result = await sendOrderConfirmationEmail(order);
-  if (!result.ok) {
+  // Persist in the (best-effort) in-memory store so the /admin dashboard
+  // can show recent orders.
+  saveOrder(order);
+
+  // Fan out notifications in parallel. We report success as long as the
+  // student confirmation email went out — operator alerts are best-effort.
+  const [studentRes, operatorMailRes, whatsappRes] = await Promise.all([
+    sendOrderConfirmationEmail(order),
+    sendOperatorOrderEmail(order),
+    notifyOperator(order),
+  ]);
+
+  if (!operatorMailRes.ok) {
+    // eslint-disable-next-line no-console
+    console.warn("[orders] operator email failed:", operatorMailRes.reason);
+  }
+  if (!whatsappRes.ok) {
+    // eslint-disable-next-line no-console
+    console.warn("[orders] whatsapp notification failed:", whatsappRes.reason);
+  }
+
+  if (!studentRes.ok) {
     return NextResponse.json(
-      { error: `Could not send confirmation: ${result.reason}` },
+      { error: `Could not send confirmation: ${studentRes.reason}` },
       { status: 502 },
     );
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    operatorEmail: operatorMailRes.ok,
+    whatsapp: whatsappRes.ok,
+  });
 }

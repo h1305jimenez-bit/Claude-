@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useCart } from "./CartProvider";
 import type { Product } from "@/lib/types";
 
@@ -7,11 +8,27 @@ export function ProductCard({ product }: { product: Product }) {
   const { items, addItem, updateQuantity } = useCart();
   const inCart = items.find((i) => i.id === product.id);
   const quantity = inCart?.quantity ?? 0;
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const showPhoto = product.imageUrl && !imgFailed;
 
   return (
     <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-card">
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-hec-sand text-3xl">
-        {product.emoji}
+      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-hec-sand">
+        {showPhoto ? (
+          // Using a plain <img> (not next/image) so we can fall back to the
+          // emoji on any load error (broken CDN, wrong barcode, etc.)
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            onError={() => setImgFailed(true)}
+            loading="lazy"
+          />
+        ) : (
+          <span className="text-3xl">{product.emoji}</span>
+        )}
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <div>

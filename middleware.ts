@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIES, verifySessionToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+// Paths that bypass the student OTP login. `/admin` has its own password.
+const PUBLIC_PATHS = ["/login", "/api/auth", "/admin", "/api/admin"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -23,8 +24,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Protect all routes except the Next.js static assets, the manifest
-  // and the login/API-auth endpoints. The matcher below does that by
-  // excluding the common static paths.
   matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest).*)"],
 };
