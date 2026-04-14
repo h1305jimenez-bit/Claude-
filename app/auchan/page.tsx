@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CATEGORIES, PRODUCTS, STORES } from "@/lib/products";
 import { ProductCard } from "@/components/ProductCard";
+import { CustomRequestCard } from "@/components/CustomRequestCard";
 import { useCart } from "@/components/CartProvider";
 import type { Category, Store } from "@/lib/types";
 
@@ -13,11 +14,7 @@ export default function AuchanPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category | "all">("all");
   const [storeFilter, setStoreFilter] = useState<StoreFilter>("all");
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customText, setCustomText] = useState("");
-  const [customPrice, setCustomPrice] = useState("");
-  const [customAdded, setCustomAdded] = useState(false);
-  const { itemCount, subtotalEUR, addItem } = useCart();
+  const { itemCount, subtotalEUR } = useCart();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -25,33 +22,12 @@ export default function AuchanPage() {
       if (category !== "all" && p.category !== category) return false;
       if (storeFilter !== "all") {
         const store = p.store ?? "both";
-        // "both" products show up regardless of store filter.
         if (store !== "both" && store !== storeFilter) return false;
       }
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
   }, [query, category, storeFilter]);
-
-  function handleAddCustom() {
-    const text = customText.trim();
-    if (!text) return;
-    const est = parseFloat(customPrice.replace(",", "."));
-    addItem({
-      kind: "custom",
-      id: `custom-${Date.now().toString(36)}`,
-      name: text.slice(0, 80),
-      note: text,
-      priceEUR: Number.isFinite(est) && est > 0 ? est : 0,
-      quantity: 1,
-      emoji: "📝",
-      unit: "request",
-    });
-    setCustomText("");
-    setCustomPrice("");
-    setCustomAdded(true);
-    setTimeout(() => setCustomAdded(false), 2500);
-  }
 
   return (
     <div className="space-y-4 pb-24">
@@ -62,6 +38,9 @@ export default function AuchanPage() {
           Saclay hypermarket (bigger selection).
         </p>
       </div>
+
+      {/* Custom request — now a prominent hero card at the top. */}
+      <CustomRequestCard />
 
       <input
         type="search"
@@ -129,64 +108,6 @@ export default function AuchanPage() {
           </p>
         )}
       </div>
-
-      {/* Custom request — something not in the catalog */}
-      <section className="rounded-2xl border border-dashed border-hec-gold bg-hec-gold-soft/40 p-4">
-        <button
-          type="button"
-          onClick={() => setCustomOpen((v) => !v)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <div>
-            <div className="text-sm font-semibold text-hec-navy">
-              📝 Can't find it? Request something else
-            </div>
-            <div className="text-xs text-slate-600">
-              Type whatever you want from Auchan — we'll buy it for you.
-            </div>
-          </div>
-          <span className="text-hec-navy">{customOpen ? "−" : "+"}</span>
-        </button>
-
-        {customOpen && (
-          <div className="mt-3 space-y-2">
-            <textarea
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value)}
-              rows={2}
-              placeholder="e.g. 1 pack of Président camembert + 2 bottles of Orangina"
-              className="w-full rounded-xl border border-hec-stone bg-white p-3 text-sm focus:border-hec-navy focus:outline-none"
-              maxLength={300}
-            />
-            <div className="flex items-center gap-2">
-              <input
-                value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-                placeholder="Estimated € (optional)"
-                inputMode="decimal"
-                className="w-40 rounded-xl border border-hec-stone bg-white px-3 py-2 text-sm focus:border-hec-navy focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleAddCustom}
-                disabled={!customText.trim()}
-                className="flex-1 rounded-full bg-hec-navy py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                Add request to cart
-              </button>
-            </div>
-            {customAdded && (
-              <p className="text-xs text-emerald-700">
-                ✓ Added to cart. We'll confirm the real price before purchase.
-              </p>
-            )}
-            <p className="text-xs text-slate-500">
-              If you leave the price empty we'll message you to confirm the
-              total before we check out.
-            </p>
-          </div>
-        )}
-      </section>
 
       {itemCount > 0 && (
         <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-hec-stone bg-white p-4 shadow-lg">

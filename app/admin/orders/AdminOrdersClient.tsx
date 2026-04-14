@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderDetails } from "@/lib/types";
 
@@ -15,10 +15,15 @@ export function AdminOrdersClient({ orders }: { orders: OrderDetails[] }) {
     [orders, filter],
   );
 
-  const totalRevenue = useMemo(
-    () => orders.reduce((sum, o) => sum + o.totalEUR, 0),
-    [orders],
-  );
+  const stats = useMemo(() => {
+    const revenue = orders.reduce((sum, o) => sum + o.totalEUR, 0);
+    const pending = orders.filter((o) => o.status === "pending_payment").length;
+    const active = orders.filter(
+      (o) => o.status === "paid" || o.status === "in_progress",
+    ).length;
+    const done = orders.filter((o) => o.status === "delivered").length;
+    return { revenue, pending, active, done };
+  }, [orders]);
 
   async function logout() {
     await fetch("/api/admin/login", { method: "DELETE" });
@@ -33,8 +38,7 @@ export function AdminOrdersClient({ orders }: { orders: OrderDetails[] }) {
             Operator dashboard
           </h1>
           <p className="text-xs text-slate-500">
-            {orders.length} orders in memory · {totalRevenue.toFixed(2)} €
-            total
+            {orders.length} orders · {stats.revenue.toFixed(2)} € total
           </p>
         </div>
         <button
@@ -44,6 +48,13 @@ export function AdminOrdersClient({ orders }: { orders: OrderDetails[] }) {
         >
           Log out
         </button>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-3 gap-2">
+        <StatBox label="Pending" value={stats.pending} tone="amber" />
+        <StatBox label="Active" value={stats.active} tone="sky" />
+        <StatBox label="Delivered" value={stats.done} tone="slate" />
       </div>
 
       <div className="rounded-2xl bg-hec-gold-soft/40 p-3 text-xs text-slate-700">
@@ -92,9 +103,58 @@ export function AdminOrdersClient({ orders }: { orders: OrderDetails[] }) {
   );
 }
 
+function StatBox({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "amber" | "sky" | "slate";
+}) {
+  const toneClass = {
+    amber: "bg-amber-50 text-amber-800",
+    sky: "bg-sky-50 text-sky-800",
+    slate: "bg-slate-100 text-slate-700",
+  }[tone];
+  return (
+    <div className={`rounded-2xl p-3 text-center ${toneClass}`}>
+      <div className="text-xl font-bold">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider">{label}</div>
+    </div>
+  );
+}
+
 function OrderCard({ order }: { order: OrderDetails }) {
   const [open, setOpen] = useState(false);
+  const [localStatus, setLocalStatus] = useState(order.status);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
   const when = new Date(order.createdAt).toLocaleString();
+
+  async function updateStatus(next: OrderDetails["status"]) {
+    setError(null);
+    const prev = localStatus;
+    setLocalStatus(next); // optimistic
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      startTransition(() => router.refresh());
+    } catch (err) {
+      setLocalStatus(prev); // rollback
+      setError(err instanceof Error ? err.message : "Could not update");
+    }
+  }
+
   return (
     <li className="rounded-2xl bg-white p-4 shadow-card">
       <button
@@ -116,9 +176,39 @@ function OrderCard({ order }: { order: OrderDetails }) {
           <div className="text-sm font-bold text-hec-navy">
             {order.totalEUR.toFixed(2)} €
           </div>
-          <StatusBadge status={order.status} />
+          <StatusBadge status={localStatus} />
         </div>
       </button>
+
+      {/* Action buttons — visible even when collapsed so the operator can
+          mark an order as delivered with one tap. */}
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-hec-stone pt-3">
+        <ActionButton
+          disabled={localStatus === "paid" || pending}
+          onClick={() => updateStatus("paid")}
+          tone="emerald"
+        >
+          💶 Mark paid
+        </ActionButton>
+        <ActionButton
+          disabled={localStatus === "in_progress" || pending}
+          onClick={() => updateStatus("in_progress")}
+          tone="sky"
+        >
+          🚲 In progress
+        </ActionButton>
+        <ActionButton
+          disabled={localStatus === "delivered" || pending}
+          onClick={() => updateStatus("delivered")}
+          tone="navy"
+        >
+          ✅ Complete
+        </ActionButton>
+      </div>
+
+      {error && (
+        <p className="mt-2 text-xs text-hec-burgundy">⚠️ {error}</p>
+      )}
 
       {open && (
         <div className="mt-3 space-y-3 border-t border-hec-stone pt-3 text-sm">
@@ -174,6 +264,34 @@ function OrderCard({ order }: { order: OrderDetails }) {
         </div>
       )}
     </li>
+  );
+}
+
+function ActionButton({
+  children,
+  onClick,
+  disabled,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  tone: "emerald" | "sky" | "navy";
+}) {
+  const toneClass = {
+    emerald: "bg-emerald-600 hover:bg-emerald-700",
+    sky: "bg-sky-600 hover:bg-sky-700",
+    navy: "bg-hec-navy hover:bg-hec-ink",
+  }[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${toneClass}`}
+    >
+      {children}
+    </button>
   );
 }
 

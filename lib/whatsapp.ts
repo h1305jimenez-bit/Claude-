@@ -1,10 +1,15 @@
 import type { OrderDetails } from "./types";
 
 /**
- * Send a WhatsApp message to the operator using CallMeBot — a free public
- * service that lets you trigger WhatsApp messages via a simple HTTP GET.
+ * Send a WhatsApp message to the operator.
  *
- * Setup (one-time, ~2 minutes):
+ * This module is the single swap-point for WhatsApp delivery. Today it uses
+ * CallMeBot (free, one-time authorization). When you migrate to your own
+ * WhatsApp bot / Cloud API / Twilio / WATI, change ONLY the fetch call
+ * below — the `notifyOperator(order)` signature stays the same and every
+ * caller (e.g. /api/orders/confirm) keeps working unchanged.
+ *
+ * CallMeBot setup (one-time, ~2 minutes):
  *   1. Save +34 644 51 95 23 to your phone contacts as "CallMeBot".
  *   2. From the operator phone (the one that will RECEIVE the alerts),
  *      send a WhatsApp message to that contact with the text:

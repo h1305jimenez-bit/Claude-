@@ -9,10 +9,13 @@ import type { Product, Category, Store } from "./types";
  *   hypermarket with international aisles, larger packs and more variety.
  *
  * Set `store` on each product so we know where it can be sourced.
- * `imageUrl` is optional — when missing, the UI falls back to the emoji.
  *
- * Image URLs use **Open Food Facts** public CDN (images.openfoodfacts.org)
- * which is free to use and serves millions of real product photos.
+ * ## Product photos
+ *
+ * Drop a photo named `{id}.jpg` into `public/products/` and it shows up
+ * automatically — no code change needed. See `public/products/README.md`
+ * for the full workflow. You can also set `imageUrl` here for a remote
+ * URL (e.g. Auchan's own CDN).
  */
 
 export const CATEGORIES: { id: Category; label: string; emoji: string }[] = [
@@ -35,12 +38,13 @@ export const STORES: { id: Store; label: string; shortLabel: string }[] = [
   { id: "both", label: "Both stores", shortLabel: "Both" },
 ];
 
-// Open Food Facts CDN — public, free, real product photos.
-const OFF = "https://images.openfoodfacts.org/images/products";
+// To add product photos: drop `{id}.jpg` into `public/products/` and they
+// show up automatically. See `public/products/README.md`. You can also set
+// an explicit `imageUrl` on any product for a remote URL.
 
 export const PRODUCTS: Product[] = [
   // ---------------- PANTRY ----------------
-  { id: "p-pasta-barilla", name: "Barilla spaghetti n°5 500g", category: "pantry", priceEUR: 1.5, unit: "pack", emoji: "🍝", store: "both", imageUrl: `${OFF}/807/680/951/3722/front_fr.400.jpg` },
+  { id: "p-pasta-barilla", name: "Barilla spaghetti n°5 500g", category: "pantry", priceEUR: 1.5, unit: "pack", emoji: "🍝", store: "both" },
   { id: "p-pasta-penne", name: "Panzani penne 500g", category: "pantry", priceEUR: 1.3, unit: "pack", emoji: "🍝", store: "both" },
   { id: "p-rice-basmati", name: "Taureau Ailé basmati rice 1kg", category: "pantry", priceEUR: 3.9, unit: "pack", emoji: "🍚", store: "both" },
   { id: "p-rice-long", name: "Long-grain rice 1kg", category: "pantry", priceEUR: 2.2, unit: "pack", emoji: "🍚", store: "both" },
@@ -52,7 +56,7 @@ export const PRODUCTS: Product[] = [
   { id: "p-cereal", name: "Jordans crunchy muesli 500g", category: "pantry", priceEUR: 4.2, unit: "box", emoji: "🥣", store: "both" },
   { id: "p-cornflakes", name: "Kellogg's Corn Flakes 500g", category: "pantry", priceEUR: 3.5, unit: "box", emoji: "🥣", store: "both" },
   { id: "p-peanut", name: "Peanut butter smooth 340g", category: "pantry", priceEUR: 3.9, unit: "jar", emoji: "🥜", store: "both" },
-  { id: "p-nutella", name: "Nutella 400g", category: "pantry", priceEUR: 3.5, unit: "jar", emoji: "🍫", store: "both", imageUrl: `${OFF}/301/762/404/7813/front_fr.400.jpg` },
+  { id: "p-nutella", name: "Nutella 400g", category: "pantry", priceEUR: 3.5, unit: "jar", emoji: "🍫", store: "both" },
   { id: "p-nutella-big", name: "Nutella 750g family jar", category: "pantry", priceEUR: 5.9, unit: "jar", emoji: "🍫", store: "saclay" },
   { id: "p-jam", name: "Bonne Maman strawberry jam 370g", category: "pantry", priceEUR: 3.2, unit: "jar", emoji: "🍓", store: "both" },
   { id: "p-honey", name: "Lune de Miel acacia honey 375g", category: "pantry", priceEUR: 5.5, unit: "jar", emoji: "🍯", store: "saclay" },
@@ -103,10 +107,10 @@ export const PRODUCTS: Product[] = [
   { id: "m-salmon", name: "Fresh salmon fillet 250g", category: "meat", priceEUR: 7.9, unit: "tray", emoji: "🐟", store: "saclay" },
 
   // ---------------- DRINKS ----------------
-  { id: "d-water", name: "Evian water 1.5L x6", category: "drinks", priceEUR: 4.5, unit: "pack", emoji: "💧", store: "both", imageUrl: `${OFF}/306/832/005/5008/front_fr.400.jpg` },
+  { id: "d-water", name: "Evian water 1.5L x6", category: "drinks", priceEUR: 4.5, unit: "pack", emoji: "💧", store: "both" },
   { id: "d-water-cristaline", name: "Cristaline water 1.5L x6", category: "drinks", priceEUR: 2.4, unit: "pack", emoji: "💧", store: "both" },
   { id: "d-sparkling", name: "Perrier sparkling water 1L x4", category: "drinks", priceEUR: 4.9, unit: "pack", emoji: "🫧", store: "both" },
-  { id: "d-coke", name: "Coca-Cola 1.5L", category: "drinks", priceEUR: 2.3, unit: "bottle", emoji: "🥤", store: "both", imageUrl: `${OFF}/544/900/013/3328/front_fr.400.jpg` },
+  { id: "d-coke", name: "Coca-Cola 1.5L", category: "drinks", priceEUR: 2.3, unit: "bottle", emoji: "🥤", store: "both" },
   { id: "d-coke-zero", name: "Coca-Cola Zero 1.5L", category: "drinks", priceEUR: 2.3, unit: "bottle", emoji: "🥤", store: "both" },
   { id: "d-sprite", name: "Sprite 1.5L", category: "drinks", priceEUR: 2.2, unit: "bottle", emoji: "🥤", store: "both" },
   { id: "d-orange", name: "Tropicana orange juice 1L", category: "drinks", priceEUR: 3.5, unit: "bottle", emoji: "🧃", store: "both" },
