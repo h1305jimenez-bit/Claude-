@@ -227,6 +227,133 @@ lib/
 middleware.ts             Redirects unauthenticated students to /login
 ```
 
+## WhatsApp bot (Meta Cloud API)
+
+The bot lets students place orders entirely from WhatsApp — no app or
+browser required. Incoming messages are handled by
+`app/api/whatsapp/webhook/route.ts` and dispatched through the state
+machine in `lib/bot-engine.ts`.
+
+### Conversation flow
+
+```
+start / "menu" / "hola" / "reset"
+  └─► main menu  [🛒 Groceries | 🧺 Laundry | 📝 Custom]
+        ├─► Groceries → choose store → choose category (paginated)
+        │             → choose product (paginated) → enter qty → cart
+        ├─► Laundry  → choose service (Wash/Dry) → enter kg → cart
+        └─► Custom   → describe request → enter qty → cart
+                          cart  [✅ Checkout | ➕ Add more | 🗑 Clear]
+                            └─► email → name → building → room
+                                → slot → notes → confirm
+                                → order placed + Revolut pay link
+```
+
+Typing **menu**, **hola**, **start**, **reset**, **hi** or **hello**
+from any step returns the user to the main menu immediately.
+
+### One-time setup in Meta Business Manager (~30–45 min)
+
+**Step 1 — Create a Meta App**
+
+1. Go to <https://business.facebook.com> (log in with a personal or
+   business Facebook account).
+2. Click **Create App** → choose type **Business**.
+3. Fill in a name (e.g. *HEC Campus Delivery*) and click **Create App**.
+
+**Step 2 — Add WhatsApp to your app**
+
+1. In the App Dashboard sidebar, find **Add Products** → click **Set up**
+   next to **WhatsApp**.
+2. Connect an existing Meta Business portfolio or create a new one.
+3. Under **WhatsApp → Getting Started** you'll see a free **test phone
+   number** (useful before going live) and a temporary 24-hour access
+   token.
+
+**Step 3 — Get your Phone Number ID** ← `WHATSAPP_PHONE_NUMBER_ID`
+
+Under **WhatsApp → API Setup**, the **Phone Number ID** is shown just
+above the "Send Message" curl example. It's a ~15-digit number —
+**not** the human-readable number like +33 6 … Copy it.
+
+**Step 4 — Generate a permanent System User token** ← `WHATSAPP_ACCESS_TOKEN`
+
+1. In **Business Settings** (gear icon, top-left) → **Users** →
+   **System Users** → **Add**.
+2. Give it a name (e.g. *hec-delivery-bot*), role **Employee**.
+3. Click **Generate New Token** → select your app → tick scopes:
+   - `whatsapp_business_messaging`
+   - `whatsapp_business_management`
+4. Copy the token — it's shown only once.
+
+**Step 5 — Configure the webhook** ← `WHATSAPP_VERIFY_TOKEN`
+
+1. Still in the App Dashboard → **WhatsApp → Configuration**.
+2. Under **Webhook**, click **Edit**.
+   - **Callback URL**: `https://<your-vercel-domain>/api/whatsapp/webhook`
+   - **Verify token**: any random string you make up — paste the **same
+     value** into `WHATSAPP_VERIFY_TOKEN` in Vercel's environment
+     variables.
+3. Click **Verify and Save** (Meta will call your GET endpoint; you must
+   have deployed first, or use a tunnel like `ngrok` locally).
+4. After saving, click **Manage** next to the webhook and subscribe to
+   the **`messages`** field.
+
+**Step 6 — Get your Business Account ID** ← `WHATSAPP_BUSINESS_ACCOUNT_ID`
+
+In **Business Settings** → **Business Info**, the **Business Account ID**
+(sometimes labelled *WhatsApp Business Account ID*) appears near the top.
+
+**Step 7 — Add test numbers (dev only)**
+
+Under **WhatsApp → API Setup → To**, click **Manage phone number list**
+and add up to 5 mobile numbers that can chat with your test number for
+free. This is not needed once you have a verified live number.
+
+**Step 8 — Add env vars to Vercel**
+
+In **Vercel → Settings → Environment Variables** add:
+
+| Variable | Where to get it |
+|---|---|
+| `WHATSAPP_ACCESS_TOKEN` | Step 4 (System User token) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Step 3 (API Setup page) |
+| `WHATSAPP_VERIFY_TOKEN` | Step 5 (string you chose) |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | Step 6 (Business Settings) |
+
+Redeploy after saving the variables.
+
+### Local development with ngrok
+
+```bash
+# Start the Next.js dev server
+npm run dev
+
+# In a second terminal, expose port 3000
+npx ngrok http 3000
+```
+
+Use the `https://xxxx.ngrok-free.app` URL as the webhook Callback URL
+in step 5 above. Re-run the webhook verification every time ngrok gives
+you a new URL.
+
+### Architecture notes
+
+| File | Role |
+|---|---|
+| `lib/whatsapp-bot.ts` | Thin Cloud API wrapper — `sendText`, `sendButtons`, `sendList`, `markAsRead` |
+| `lib/bot-session.ts` | Per-phone in-memory session store (`BotSession`, `BotStep`) |
+| `lib/bot-engine.ts` | State machine — `handleIncoming()` entry point |
+| `app/api/whatsapp/webhook/route.ts` | GET (verification) + POST (dispatch) |
+| `lib/whatsapp.ts` | CallMeBot fallback for outbound operator alerts |
+
+The session store is in-memory (same trade-offs as `orders-store.ts`).
+For production persistence, swap the `Map` in `bot-session.ts` for
+Vercel KV or Upstash Redis — the `getSession` / `saveSession` /
+`clearSession` API stays the same.
+
+---
+
 ## Roadmap
 
 - [ ] Real DB (Supabase/Postgres or Vercel KV) + persistent dashboard.
