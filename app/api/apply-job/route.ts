@@ -1,86 +1,129 @@
 import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
 
+interface Profile {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+function parseGreenhouseUrl(url: string): { company: string; jobId: string } | null {
+  const m = url.match(/boards\.greenhouse\.io\/([^/?#]+)\/jobs\/(\d+)/);
+  if (m) return { company: m[1], jobId: m[2] };
+  return null;
+}
+
+function parseLeverUrl(url: string): { company: string; postingId: string } | null {
+  const m = url.match(/jobs(?:\.eu)?\.lever\.co\/([^/?#]+)\/([a-f0-9-]{36})/i);
+  if (m) return { company: m[1], postingId: m[2] };
+  return null;
+}
+
+async function applyGreenhouse(
+  params: { company: string; jobId: string },
+  profile: Profile,
+  cvBuffer: Buffer,
+  cvFilename: string,
+): Promise<boolean> {
+  // Fetch job to get the required application_key
+  const jobRes = await fetch(
+    `https://boards-api.greenhouse.io/v1/boards/${params.company}/jobs/${params.jobId}?questions=true`,
+    { signal: AbortSignal.timeout(6000) },
+  );
+  if (!jobRes.ok) return false;
+
+  const jobData = await jobRes.json() as { application_key?: string };
+  const applicationKey = jobData.application_key;
+  if (!applicationKey) return false;
+
+  const nameParts = profile.name.trim().split(/\s+/);
+  const firstName = nameParts[0] ?? "Candidate";
+  const lastName = nameParts.slice(1).join(" ") || ".";
+
+  const fd = new FormData();
+  fd.append("application_key", applicationKey);
+  fd.append("first_name", firstName);
+  fd.append("last_name", lastName);
+  fd.append("email", profile.email);
+  if (profile.phone) fd.append("phone", profile.phone);
+  fd.append(
+    "resume",
+    new Blob([cvBuffer], { type: "application/pdf" }),
+    cvFilename,
+  );
+
+  const res = await fetch(
+    `https://boards-api.greenhouse.io/v1/boards/${params.company}/jobs/${params.jobId}/applications`,
+    { method: "POST", body: fd, signal: AbortSignal.timeout(10000) },
+  );
+
+  return res.ok;
+}
+
+async function applyLever(
+  params: { company: string; postingId: string },
+  profile: Profile,
+  cvBuffer: Buffer,
+  cvFilename: string,
+): Promise<boolean> {
+  const fd = new FormData();
+  fd.append("name", profile.name);
+  fd.append("email", profile.email);
+  if (profile.phone) fd.append("phone", profile.phone);
+  fd.append(
+    "resume",
+    new Blob([cvBuffer], { type: "application/pdf" }),
+    cvFilename,
+  );
+
+  const res = await fetch(
+    `https://api.lever.co/v0/postings/${params.company}/${params.postingId}/apply`,
+    { method: "POST", body: fd, signal: AbortSignal.timeout(10000) },
+  );
+
+  return res.ok;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { profile, job } = await req.json();
+    const formData = await req.formData();
+    const cvFile = formData.get("cv") as File | null;
+    const profileJson = formData.get("profile") as string | null;
+    const jobJson = formData.get("job") as string | null;
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return Response.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 503 });
+    if (!profileJson || !jobJson) {
+      return Response.json({ applied: false, error: "Missing data" }, { status: 400 });
     }
 
-    const client = new Anthropic({ apiKey });
+    const profile: Profile = JSON.parse(profileJson);
+    const job: { url: string } = JSON.parse(jobJson);
 
-    // Detect if job description/company suggests non-English language
-    const descLower = (job.description as string).toLowerCase();
-    const isLikelyFrench =
-      descLower.includes(" vous ") ||
-      descLower.includes(" nous ") ||
-      descLower.includes(" poste ") ||
-      descLower.includes(" entreprise ");
-    const language = isLikelyFrench ? "French" : "English";
+    if (!profile.email) {
+      return Response.json({ applied: false, error: "No email in profile" });
+    }
 
-    // Stream the application letter
-    const stream = client.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 800,
-      messages: [
-        {
-          role: "user",
-          content: `Write a professional job application message in ${language} for this role.
+    const cvBuffer = cvFile ? Buffer.from(await cvFile.arrayBuffer()) : null;
+    const cvFilename = cvFile?.name ?? "resume.pdf";
 
-Candidate:
-- Name: ${profile.name}
-- Current title: ${profile.title}
-- Skills: ${(profile.skills as string[]).slice(0, 10).join(", ")}
-- Experience: ${profile.experience_years} years
-- Education: ${profile.education}
-- Summary: ${profile.summary}
+    // Try Greenhouse
+    const ghParams = parseGreenhouseUrl(job.url);
+    if (ghParams && cvBuffer) {
+      const ok = await applyGreenhouse(ghParams, profile, cvBuffer, cvFilename);
+      if (ok) return Response.json({ applied: true, ats: "Greenhouse" });
+    }
 
-Job:
-- Title: ${job.title}
-- Company: ${job.company}
-- Location: ${job.location}
-- Type: ${job.type}
-- Tags: ${(job.tags as string[]).join(", ")}
-- Description excerpt: ${job.description}
+    // Try Lever
+    const leverParams = parseLeverUrl(job.url);
+    if (leverParams && cvBuffer) {
+      const ok = await applyLever(leverParams, profile, cvBuffer, cvFilename);
+      if (ok) return Response.json({ applied: true, ats: "Lever" });
+    }
 
-Instructions:
-- 3 short paragraphs: brief intro + why this role, relevant experience matching job requirements, enthusiastic closing
-- Mention 2-3 specific skills from the job tags/description
-- Professional and direct tone
-- End with candidate name: ${profile.name}
-- NO placeholders like [Company] — use the actual company name: ${job.company}`,
-        },
-      ],
-    });
-
-    const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      async start(controller) {
-        for await (const chunk of stream) {
-          if (
-            chunk.type === "content_block_delta" &&
-            chunk.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(chunk.delta.text));
-          }
-        }
-        controller.close();
-      },
-    });
-
-    return new Response(readable, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
+    // ATS not supported — tell frontend to open URL
+    return Response.json({ applied: false });
   } catch (err) {
     console.error("[apply-job]", err);
-    return Response.json(
-      { error: err instanceof Error ? err.message : "Failed to generate application" },
-      { status: 500 },
-    );
+    return Response.json({ applied: false, error: String(err) });
   }
 }
