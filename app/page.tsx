@@ -63,7 +63,6 @@ export default function HomePage() {
             ›
           </span>
         </Link>
-      </section>
 
         <Link
           href="/jobs"
@@ -74,10 +73,10 @@ export default function HomePage() {
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-hec-navy">
-              Offres d'emploi
+              AI Job Search
             </h2>
             <p className="text-sm text-slate-600">
-              Trouvez stages, alternances et CDI adaptés à votre profil HEC.
+              Upload your CV · Claude matches roles worldwide · auto-apply.
             </p>
           </div>
           <span className="text-xl text-hec-navy/30 transition group-hover:text-hec-navy">
