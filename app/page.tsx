@@ -65,6 +65,27 @@ export default function HomePage() {
         </Link>
       </section>
 
+        <Link
+          href="/jobs"
+          className="group flex items-center gap-4 rounded-2xl border border-hec-stone bg-white p-5 shadow-card transition hover:border-hec-navy"
+        >
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 text-4xl">
+            💼
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-hec-navy">
+              Offres d'emploi
+            </h2>
+            <p className="text-sm text-slate-600">
+              Trouvez stages, alternances et CDI adaptés à votre profil HEC.
+            </p>
+          </div>
+          <span className="text-xl text-hec-navy/30 transition group-hover:text-hec-navy">
+            ›
+          </span>
+        </Link>
+      </section>
+
       <section className="rounded-2xl border border-dashed border-hec-stone p-4 text-sm text-slate-600">
         <h3 className="mb-1 font-semibold text-hec-navy">How it works</h3>
         <ol className="list-inside list-decimal space-y-1">
