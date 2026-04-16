@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { UnifiedJob } from "@/app/api/search-jobs/route";
 import type { CandidateProfile } from "@/app/api/analyze-cv/route";
 
@@ -27,146 +27,9 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-// ── Apply modal ───────────────────────────────────────────────────────────────
-
-function ApplyModal({
-  job,
-  profile,
-  onClose,
-}: {
-  job: UnifiedJob;
-  profile: CandidateProfile | null;
-  onClose: () => void;
-}) {
-  const [text, setText] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [applied, setApplied] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setText("");
-
-    (async () => {
-      try {
-        const res = await fetch("/api/apply-job", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ job, profile }),
-        });
-        if (!res.body) throw new Error("No stream");
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done || cancelled) break;
-          setText((prev) => prev + decoder.decode(value));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [job, profile]);
-
-  async function handleApply() {
-    window.open(job.url, "_blank", "noopener");
-    setApplied(true);
-  }
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-hec-stone">
-          <div>
-            <p className="text-xs text-hec-gold font-semibold uppercase tracking-widest">
-              Auto-Apply
-            </p>
-            <h2 className="text-hec-navy font-bold text-base leading-tight mt-0.5">
-              {job.title}
-            </h2>
-            <p className="text-slate-500 text-xs mt-0.5">{job.company}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-xl leading-none p-1 active:scale-95 transition-all"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5">
-          {loading && text === "" ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <div className="w-8 h-8 border-2 border-hec-navy border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-slate-500">
-                Claude is writing your application…
-              </p>
-            </div>
-          ) : (
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full text-sm text-hec-ink leading-relaxed resize-none outline-none min-h-[280px]"
-              style={{ fontFamily: "inherit" }}
-            />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-hec-stone flex flex-col gap-2">
-          {applied ? (
-            <div className="bg-green-50 rounded-2xl p-3 text-center">
-              <p className="text-green-700 font-semibold text-sm">
-                ✓ Opened career page
-              </p>
-              <p className="text-green-600 text-xs mt-0.5">
-                Paste the application text into the form
-              </p>
-            </div>
-          ) : (
-            <button
-              onClick={handleApply}
-              disabled={loading && text === ""}
-              className="w-full py-3 bg-hec-navy text-white font-semibold rounded-2xl active:scale-95 transition-all disabled:opacity-40 text-sm"
-            >
-              Apply Now — Open Career Page →
-            </button>
-          )}
-          <button
-            onClick={handleCopy}
-            disabled={!text}
-            className="w-full py-2.5 bg-hec-sand text-hec-navy font-semibold rounded-2xl active:scale-95 transition-all disabled:opacity-40 text-sm"
-          >
-            {copied ? "Copied ✓" : "Copy Application Text"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Job card ──────────────────────────────────────────────────────────────────
 
-function JobCard({
-  job,
-  onApply,
-}: {
-  job: UnifiedJob;
-  onApply: (job: UnifiedJob) => void;
-}) {
+function JobCard({ job }: { job: UnifiedJob }) {
   return (
     <div className="bg-white rounded-2xl border border-hec-stone shadow-card p-5 hover:border-hec-navy transition-colors">
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -220,22 +83,14 @@ function JobCard({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => onApply(job)}
-          className="flex-1 py-2.5 bg-hec-navy text-white text-xs font-semibold rounded-xl active:scale-95 transition-all hover:bg-hec-blue"
-        >
-          Auto-Apply ⚡
-        </button>
-        <a
-          href={job.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-4 py-2.5 bg-hec-sand text-hec-navy text-xs font-semibold rounded-xl active:scale-95 transition-all hover:bg-hec-stone inline-flex items-center"
-        >
-          View →
-        </a>
-      </div>
+      <a
+        href={job.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full py-2.5 bg-hec-navy text-white text-xs font-semibold rounded-xl active:scale-95 transition-all hover:bg-hec-blue text-center"
+      >
+        Apply ⚡
+      </a>
     </div>
   );
 }
@@ -321,8 +176,6 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<UnifiedJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [applyJob, setApplyJob] = useState<UnifiedJob | null>(null);
-
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
@@ -611,7 +464,7 @@ export default function JobsPage() {
             ) : (
               <div className="flex flex-col gap-3">
                 {jobs.map((job) => (
-                  <JobCard key={job.id} job={job} onApply={setApplyJob} />
+                  <JobCard key={job.id} job={job} />
                 ))}
               </div>
             )}
@@ -619,14 +472,6 @@ export default function JobsPage() {
         )}
       </div>
 
-      {/* Apply modal */}
-      {applyJob && (
-        <ApplyModal
-          job={applyJob}
-          profile={profile}
-          onClose={() => setApplyJob(null)}
-        />
-      )}
     </main>
   );
 }
