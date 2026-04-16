@@ -63,7 +63,10 @@ async function post(body: unknown): Promise<{ ok: boolean; reason?: string }> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return { ok: false, reason: `HTTP ${res.status}: ${text.slice(0, 200)}` };
+      const reason = `HTTP ${res.status}: ${text.slice(0, 400)}`;
+      // eslint-disable-next-line no-console
+      console.error("[wa-bot] Graph API error:", reason);
+      return { ok: false, reason };
     }
     return { ok: true };
   } catch (err) {
