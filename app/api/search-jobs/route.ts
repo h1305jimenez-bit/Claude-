@@ -65,6 +65,17 @@ interface FindWorkJob {
   text: string;
 }
 
+interface RemoteOKJob {
+  id: string;
+  position: string;
+  company: string;
+  tags: string[];
+  url: string;
+  date: string;
+  description: string;
+  location: string;
+}
+
 export interface UnifiedJob {
   id: string;
   title: string;
@@ -125,131 +136,200 @@ function locationFlag(loc: string): string {
   return "📍";
 }
 
+// Round-robin interleave: [A1,B1,C1, A2,B2,C2, ...] so sources mix evenly
+function interleave(arrays: UnifiedJob[][]): UnifiedJob[] {
+  const result: UnifiedJob[] = [];
+  const maxLen = Math.max(0, ...arrays.map((a) => a.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const arr of arrays) {
+      if (i < arr.length) result.push(arr[i]);
+    }
+  }
+  return result;
+}
+
 async function fetchArbeitnow(query: string): Promise<UnifiedJob[]> {
-  const res = await fetch(
-    `https://arbeitnow.com/api/job-board-api?search=${encodeURIComponent(query)}`,
-    { signal: AbortSignal.timeout(8000) },
-  );
-  if (!res.ok) return [];
-  const { data } = (await res.json()) as { data: ArbeitnowJob[] };
-  return data.slice(0, 30).map((j) => {
-    const loc = j.remote ? "Remote" : j.location || "—";
-    return {
-      id: `arbeitnow-${j.slug}`,
-      title: j.title,
-      company: j.company_name,
-      location: loc,
-      flag: locationFlag(loc),
-      type: j.job_types[0] ?? "Full-time",
-      url: j.url,
-      description: stripHtml(j.description).slice(0, 500),
-      tags: j.tags.slice(0, 6),
-      source: "Arbeitnow",
-      postedAt: formatDate(j.created_at),
-    };
-  });
+  try {
+    const res = await fetch(
+      `https://arbeitnow.com/api/job-board-api?search=${encodeURIComponent(query)}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return [];
+    const { data } = (await res.json()) as { data: ArbeitnowJob[] };
+    return (data ?? []).slice(0, 15).map((j) => {
+      const loc = j.remote ? "Remote" : j.location || "—";
+      return {
+        id: `arbeitnow-${j.slug}`,
+        title: j.title,
+        company: j.company_name,
+        location: loc,
+        flag: locationFlag(loc),
+        type: j.job_types[0] ?? "Full-time",
+        url: j.url,
+        description: stripHtml(j.description).slice(0, 500),
+        tags: j.tags.slice(0, 6),
+        source: "Arbeitnow",
+        postedAt: formatDate(j.created_at),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 async function fetchRemotive(query: string): Promise<UnifiedJob[]> {
-  const res = await fetch(
-    `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=30`,
-    { signal: AbortSignal.timeout(8000) },
-  );
-  if (!res.ok) return [];
-  const { jobs } = (await res.json()) as { jobs: RemotiveJob[] };
-  return jobs.slice(0, 25).map((j) => {
-    const loc = j.candidate_required_location || "Worldwide";
-    return {
-      id: `remotive-${j.id}`,
-      title: j.title,
-      company: j.company_name,
-      location: loc,
-      flag: locationFlag(loc),
-      type: j.job_type ?? "Full-time",
-      url: j.url,
-      description: stripHtml(j.description).slice(0, 500),
-      tags: j.tags.slice(0, 6),
-      source: "Remotive",
-      postedAt: formatDate(j.publication_date),
-    };
-  });
+  try {
+    const res = await fetch(
+      `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=30`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return [];
+    const { jobs } = (await res.json()) as { jobs: RemotiveJob[] };
+    return (jobs ?? []).slice(0, 25).map((j) => {
+      const loc = j.candidate_required_location || "Worldwide";
+      return {
+        id: `remotive-${j.id}`,
+        title: j.title,
+        company: j.company_name,
+        location: loc,
+        flag: locationFlag(loc),
+        type: j.job_type ?? "Full-time",
+        url: j.url,
+        description: stripHtml(j.description).slice(0, 500),
+        tags: j.tags.slice(0, 6),
+        source: "Remotive",
+        postedAt: formatDate(j.publication_date),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 async function fetchTheMuse(query: string): Promise<UnifiedJob[]> {
-  const category = encodeURIComponent(query || "Software Engineer");
-  const res = await fetch(
-    `https://www.themuse.com/api/public/jobs?category=${category}&page=0&descending=true`,
-    { signal: AbortSignal.timeout(8000) },
-  );
-  if (!res.ok) return [];
-  const { results } = (await res.json()) as { results: MuseJob[] };
-  return (results ?? []).slice(0, 20).map((j) => {
-    const loc = j.locations?.[0]?.name ?? "—";
-    return {
-      id: `muse-${j.id}`,
-      title: j.name,
-      company: j.company.name,
-      location: loc,
-      flag: locationFlag(loc),
-      type: j.levels?.[0]?.name ?? "Full-time",
-      url: j.refs.landing_page,
-      description: stripHtml(j.contents ?? "").slice(0, 500),
-      tags: j.levels?.map((l) => l.name) ?? [],
-      source: "The Muse",
-      postedAt: formatDate(j.publication_date),
-    };
-  });
+  try {
+    const category = encodeURIComponent(query || "Software Engineer");
+    const res = await fetch(
+      `https://www.themuse.com/api/public/jobs?category=${category}&page=0&descending=true`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return [];
+    const { results } = (await res.json()) as { results: MuseJob[] };
+    return (results ?? []).slice(0, 20).map((j) => {
+      const loc = j.locations?.[0]?.name ?? "—";
+      return {
+        id: `muse-${j.id}`,
+        title: j.name,
+        company: j.company.name,
+        location: loc,
+        flag: locationFlag(loc),
+        type: j.levels?.[0]?.name ?? "Full-time",
+        url: j.refs.landing_page,
+        description: stripHtml(j.contents ?? "").slice(0, 500),
+        tags: j.levels?.map((l) => l.name) ?? [],
+        source: "The Muse",
+        postedAt: formatDate(j.publication_date),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 async function fetchJobicy(query: string): Promise<UnifiedJob[]> {
-  const tag = encodeURIComponent(query.split(/\s+/)[0] ?? "developer");
-  const res = await fetch(
-    `https://jobicy.com/api/v2/remote-jobs?count=20&tag=${tag}`,
-    { signal: AbortSignal.timeout(8000) },
-  );
-  if (!res.ok) return [];
-  const data = (await res.json()) as { jobs?: JobicyJob[] };
-  return (data.jobs ?? []).slice(0, 18).map((j) => {
-    const loc = j.jobGeo || "Remote";
-    return {
-      id: `jobicy-${j.id}`,
-      title: j.jobTitle,
-      company: j.companyName,
-      location: loc,
-      flag: locationFlag(loc),
-      type: j.jobType?.[0] ?? "Full-time",
-      url: j.url,
-      description: stripHtml(j.jobDescription ?? "").slice(0, 500),
-      tags: [...(j.jobIndustry ?? []), j.jobLevel].filter(Boolean).slice(0, 5),
-      source: "Jobicy",
-      postedAt: formatDate(j.pubDate),
-    };
-  });
+  try {
+    const tag = encodeURIComponent(query.split(/\s+/)[0] ?? "developer");
+    const res = await fetch(
+      `https://jobicy.com/api/v2/remote-jobs?count=20&tag=${tag}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { jobs?: JobicyJob[] };
+    return (data.jobs ?? []).slice(0, 18).map((j) => {
+      const loc = j.jobGeo || "Remote";
+      return {
+        id: `jobicy-${j.id}`,
+        title: j.jobTitle,
+        company: j.companyName,
+        location: loc,
+        flag: locationFlag(loc),
+        type: j.jobType?.[0] ?? "Full-time",
+        url: j.url,
+        description: stripHtml(j.jobDescription ?? "").slice(0, 500),
+        tags: [...(j.jobIndustry ?? []), j.jobLevel].filter(Boolean).slice(0, 5),
+        source: "Jobicy",
+        postedAt: formatDate(j.pubDate),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 async function fetchFindWork(query: string): Promise<UnifiedJob[]> {
-  const res = await fetch(
-    `https://findwork.dev/api/jobs/?search=${encodeURIComponent(query)}&order_by=-date`,
-    { signal: AbortSignal.timeout(8000) },
-  );
-  if (!res.ok) return [];
-  const data = (await res.json()) as { results?: FindWorkJob[] };
-  return (data.results ?? []).slice(0, 20).map((j) => {
-    const loc = j.remote ? "Remote" : j.location || "—";
-    return {
-      id: `findwork-${j.id}`,
-      title: j.role,
-      company: j.company_name,
-      location: loc,
-      flag: locationFlag(loc),
-      type: j.employment_type || "Full-time",
-      url: j.url,
-      description: stripHtml(j.text ?? "").slice(0, 500),
-      tags: (j.keywords ?? []).slice(0, 6),
-      source: "FindWork",
-      postedAt: formatDate(j.date_posted),
-    };
-  });
+  try {
+    const res = await fetch(
+      `https://findwork.dev/api/jobs/?search=${encodeURIComponent(query)}&order_by=-date`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { results?: FindWorkJob[] };
+    return (data.results ?? []).slice(0, 20).map((j) => {
+      const loc = j.remote ? "Remote" : j.location || "—";
+      return {
+        id: `findwork-${j.id}`,
+        title: j.role,
+        company: j.company_name,
+        location: loc,
+        flag: locationFlag(loc),
+        type: j.employment_type || "Full-time",
+        url: j.url,
+        description: stripHtml(j.text ?? "").slice(0, 500),
+        tags: (j.keywords ?? []).slice(0, 6),
+        source: "FindWork",
+        postedAt: formatDate(j.date_posted),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function fetchRemoteOK(query: string): Promise<UnifiedJob[]> {
+  try {
+    const tag = encodeURIComponent(query.split(/\s+/)[0] ?? "engineer");
+    const res = await fetch(
+      `https://remoteok.com/api?tag=${tag}`,
+      {
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; job-search-app)" },
+      },
+    );
+    if (!res.ok) return [];
+    const text = await res.text();
+    // RemoteOK sometimes returns non-JSON error pages
+    if (!text.trim().startsWith("[")) return [];
+    const data = JSON.parse(text) as RemoteOKJob[];
+    // First item is metadata object, skip it
+    return data.slice(1, 20).map((j) => {
+      const loc = j.location || "Worldwide";
+      return {
+        id: `remoteok-${j.id}`,
+        title: j.position ?? "",
+        company: j.company ?? "",
+        location: loc,
+        flag: locationFlag(loc),
+        type: "Full-time",
+        url: j.url ?? `https://remoteok.com/remote-jobs/${j.id}`,
+        description: stripHtml(j.description ?? "").slice(0, 500),
+        tags: (j.tags ?? []).slice(0, 6),
+        source: "RemoteOK",
+        postedAt: formatDate(j.date),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -258,18 +338,19 @@ export async function POST(req: NextRequest) {
     const query: string = body.query ?? "";
     const profile = body.profile ?? null;
 
-    // Fetch all 5 sources in parallel
+    // Fetch all 6 sources in parallel
     const results = await Promise.allSettled([
       fetchArbeitnow(query),
       fetchRemotive(query),
       fetchTheMuse(query),
       fetchJobicy(query),
       fetchFindWork(query),
+      fetchRemoteOK(query),
     ]);
 
-    const jobs: UnifiedJob[] = results.flatMap((r) =>
-      r.status === "fulfilled" ? r.value : [],
-    );
+    // Interleave results so sources mix evenly (not all German jobs first)
+    const arrays = results.map((r) => (r.status === "fulfilled" ? r.value : []));
+    const jobs: UnifiedJob[] = interleave(arrays);
 
     if (jobs.length === 0) return Response.json({ jobs: [] });
     if (!profile) return Response.json({ jobs: jobs.slice(0, 60) });

@@ -27,6 +27,7 @@ const SOURCE_COLORS: Record<string, string> = {
   "The Muse": "bg-purple-50 text-purple-700",
   Jobicy: "bg-orange-50 text-orange-700",
   FindWork: "bg-red-50 text-red-700",
+  RemoteOK: "bg-teal-50 text-teal-700",
 };
 
 // ── Score badge ───────────────────────────────────────────────────────────────
@@ -393,7 +394,12 @@ export default function JobsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: q, profile: prof }),
       });
-      const data = await res.json();
+      let data: { jobs?: UnifiedJob[]; error?: string };
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Server error — please restart the dev server and try again");
+      }
       if (!res.ok) throw new Error(data.error || "Search failed");
       setJobs(data.jobs ?? []);
     } catch (err) {
