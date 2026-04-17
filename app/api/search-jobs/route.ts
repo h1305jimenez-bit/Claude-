@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
 
@@ -359,6 +358,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return Response.json({ jobs: jobs.slice(0, 60) });
 
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic({ apiKey });
     const top = jobs.slice(0, 40);
     const jobList = top

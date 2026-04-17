@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
 
@@ -52,6 +51,7 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 503 });
     }
 
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic({ apiKey });
 
     const response = await client.messages.create({

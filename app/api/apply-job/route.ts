@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
 
@@ -28,6 +27,7 @@ async function generateCoverLetter(
   job: { title: string; company: string; location: string; type: string; tags: string[]; description: string },
   apiKey: string,
 ): Promise<string> {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic({ apiKey });
   const isLikelyFrench = / vous | nous | poste | entreprise /.test(
     job.description.toLowerCase(),
