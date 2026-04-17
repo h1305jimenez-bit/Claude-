@@ -1,13 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  webpack: (config) => {
-    // pdf-parse reads a test file at require time; point to the lib entry directly
-    config.resolve.alias["pdf-parse"] = require.resolve(
-      "pdf-parse/lib/pdf-parse.js",
-    );
-    return config;
-  },
   images: {
     remotePatterns: [
       // Open Food Facts — public CDN with real product photos.
