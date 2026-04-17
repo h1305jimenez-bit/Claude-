@@ -11,6 +11,7 @@ export interface Application {
   ats?: string;
   status: AppStatus;
   appliedAt: string;
+  coverLetter?: string;
 }
 
 const KEY = "job-applications-v1";

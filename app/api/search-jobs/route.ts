@@ -21,12 +21,35 @@ interface RemotiveJob {
   url: string;
   title: string;
   company_name: string;
-  category: string;
   tags: string[];
   job_type: string;
   publication_date: string;
   candidate_required_location: string;
   description: string;
+}
+
+interface MuseJob {
+  id: number;
+  name: string;
+  publication_date: string;
+  locations: { name: string }[];
+  levels: { name: string }[];
+  company: { name: string };
+  refs: { landing_page: string };
+  contents: string;
+}
+
+interface JobicyJob {
+  id: number;
+  url: string;
+  jobTitle: string;
+  companyName: string;
+  jobGeo: string;
+  jobType: string[];
+  pubDate: string;
+  jobDescription: string;
+  jobIndustry: string[];
+  jobLevel: string;
 }
 
 export interface UnifiedJob {
@@ -51,17 +74,102 @@ function stripHtml(html: string): string {
 function formatDate(dateStr: string): string {
   try {
     const d = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffDays = Math.floor(diffMs / 86_400_000);
+    const diffDays = Math.floor((Date.now() - d.getTime()) / 86_400_000);
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   } catch {
     return dateStr;
   }
+}
+
+async function fetchArbeitnow(query: string): Promise<UnifiedJob[]> {
+  const res = await fetch(
+    `https://arbeitnow.com/api/job-board-api?search=${encodeURIComponent(query)}`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) return [];
+  const { data } = (await res.json()) as { data: ArbeitnowJob[] };
+  return data.slice(0, 20).map((j) => ({
+    id: `arbeitnow-${j.slug}`,
+    title: j.title,
+    company: j.company_name,
+    location: j.remote ? "Remote" : j.location || "—",
+    type: j.job_types[0] ?? "Full-time",
+    url: j.url,
+    description: stripHtml(j.description).slice(0, 500),
+    tags: j.tags.slice(0, 6),
+    source: "Arbeitnow",
+    postedAt: formatDate(j.created_at),
+  }));
+}
+
+async function fetchRemotive(query: string): Promise<UnifiedJob[]> {
+  const res = await fetch(
+    `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=20`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) return [];
+  const { jobs } = (await res.json()) as { jobs: RemotiveJob[] };
+  return jobs.slice(0, 15).map((j) => ({
+    id: `remotive-${j.id}`,
+    title: j.title,
+    company: j.company_name,
+    location: j.candidate_required_location || "Remote",
+    type: j.job_type ?? "Full-time",
+    url: j.url,
+    description: stripHtml(j.description).slice(0, 500),
+    tags: j.tags.slice(0, 6),
+    source: "Remotive",
+    postedAt: formatDate(j.publication_date),
+  }));
+}
+
+async function fetchTheMuse(query: string): Promise<UnifiedJob[]> {
+  const category = encodeURIComponent(query || "Software Engineer");
+  const res = await fetch(
+    `https://www.themuse.com/api/public/jobs?category=${category}&page=0&descending=true`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) return [];
+  const { results } = (await res.json()) as { results: MuseJob[] };
+  return (results ?? []).slice(0, 15).map((j) => ({
+    id: `muse-${j.id}`,
+    title: j.name,
+    company: j.company.name,
+    location: j.locations?.[0]?.name ?? "—",
+    type: j.levels?.[0]?.name ?? "Full-time",
+    url: j.refs.landing_page,
+    description: stripHtml(j.contents ?? "").slice(0, 500),
+    tags: j.levels?.map((l) => l.name) ?? [],
+    source: "The Muse",
+    postedAt: formatDate(j.publication_date),
+  }));
+}
+
+async function fetchJobicy(query: string): Promise<UnifiedJob[]> {
+  // Jobicy uses tag-based search; take first meaningful keyword
+  const tag = encodeURIComponent(query.split(/\s+/)[0] ?? "developer");
+  const res = await fetch(
+    `https://jobicy.com/api/v2/remote-jobs?count=15&tag=${tag}`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { jobs?: JobicyJob[] };
+  return (data.jobs ?? []).slice(0, 12).map((j) => ({
+    id: `jobicy-${j.id}`,
+    title: j.jobTitle,
+    company: j.companyName,
+    location: j.jobGeo || "Remote",
+    type: j.jobType?.[0] ?? "Full-time",
+    url: j.url,
+    description: stripHtml(j.jobDescription ?? "").slice(0, 500),
+    tags: [...(j.jobIndustry ?? []), j.jobLevel].filter(Boolean).slice(0, 5),
+    source: "Jobicy",
+    postedAt: formatDate(j.pubDate),
+  }));
 }
 
 export async function POST(req: NextRequest) {
@@ -70,101 +178,47 @@ export async function POST(req: NextRequest) {
     const query: string = body.query ?? "";
     const profile = body.profile ?? null;
 
-    // Fetch from both sources in parallel
-    const [arbeitnowRes, remotiveRes] = await Promise.allSettled([
-      fetch(
-        `https://arbeitnow.com/api/job-board-api?search=${encodeURIComponent(query)}`,
-        { signal: AbortSignal.timeout(8000) },
-      ),
-      fetch(
-        `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=30`,
-        { signal: AbortSignal.timeout(8000) },
-      ),
+    // Fetch all sources in parallel
+    const results = await Promise.allSettled([
+      fetchArbeitnow(query),
+      fetchRemotive(query),
+      fetchTheMuse(query),
+      fetchJobicy(query),
     ]);
 
-    const jobs: UnifiedJob[] = [];
+    const jobs: UnifiedJob[] = results.flatMap((r) =>
+      r.status === "fulfilled" ? r.value : [],
+    );
 
-    if (arbeitnowRes.status === "fulfilled" && arbeitnowRes.value.ok) {
-      const data = (await arbeitnowRes.value.json()) as {
-        data: ArbeitnowJob[];
-      };
-      for (const j of data.data.slice(0, 25)) {
-        jobs.push({
-          id: `arbeitnow-${j.slug}`,
-          title: j.title,
-          company: j.company_name,
-          location: j.remote ? "Remote" : j.location || "—",
-          type: j.job_types[0] ?? "Full-time",
-          url: j.url,
-          description: stripHtml(j.description).slice(0, 600),
-          tags: j.tags.slice(0, 6),
-          source: "Arbeitnow",
-          postedAt: formatDate(j.created_at),
-        });
-      }
-    }
+    if (jobs.length === 0) return Response.json({ jobs: [] });
 
-    if (remotiveRes.status === "fulfilled" && remotiveRes.value.ok) {
-      const data = (await remotiveRes.value.json()) as {
-        jobs: RemotiveJob[];
-      };
-      for (const j of data.jobs.slice(0, 20)) {
-        jobs.push({
-          id: `remotive-${j.id}`,
-          title: j.title,
-          company: j.company_name,
-          location: j.candidate_required_location || "Remote",
-          type: j.job_type ?? "Full-time",
-          url: j.url,
-          description: stripHtml(j.description).slice(0, 600),
-          tags: j.tags.slice(0, 6),
-          source: "Remotive",
-          postedAt: formatDate(j.publication_date),
-        });
-      }
-    }
+    if (!profile) return Response.json({ jobs: jobs.slice(0, 50) });
 
-    if (jobs.length === 0) {
-      return Response.json({ jobs: [] });
-    }
-
-    // If no profile, return jobs sorted by recency (already in order)
-    if (!profile) {
-      return Response.json({ jobs: jobs.slice(0, 40) });
-    }
-
-    // Score jobs with Claude when CV profile is provided
+    // Score with Claude when CV profile is provided
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return Response.json({ jobs: jobs.slice(0, 40) });
-    }
+    if (!apiKey) return Response.json({ jobs: jobs.slice(0, 50) });
 
     const client = new Anthropic({ apiKey });
-    const jobList = jobs
-      .slice(0, 30)
+    const top = jobs.slice(0, 30);
+    const jobList = top
       .map(
         (j, i) =>
-          `${i + 1}. "${j.title}" at ${j.company} (${j.location}) [${j.type}] — Tags: ${j.tags.join(", ")}`,
+          `${i + 1}. "${j.title}" at ${j.company} (${j.location}) [${j.type}] — ${j.tags.join(", ")}`,
       )
       .join("\n");
 
     const scoreMsg = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
-      system: "Job matching assistant. Return only valid JSON array, no markdown.",
+      system: "Job matching assistant. Return only a valid JSON array, no markdown.",
       messages: [
         {
           role: "user",
-          content: `Candidate:
-- Title: ${profile.title}
-- Skills: ${(profile.skills as string[]).join(", ")}
-- Experience: ${profile.experience_years} years
-- Summary: ${profile.summary}
+          content: `Candidate: ${profile.title}, skills: ${(profile.skills as string[]).join(", ")}, ${profile.experience_years}y exp.
 
-Score each job 0-100. Return: [{"index":1,"score":85,"reasons":["reason1","reason2"]}]
+Score each job 0-100. Return: [{"index":1,"score":85,"reasons":["reason"]}]
 
-Jobs:
-${jobList}`,
+Jobs:\n${jobList}`,
         },
       ],
     });
@@ -175,12 +229,12 @@ ${jobList}`,
     const scores: { index: number; score: number; reasons: string[] }[] =
       arrMatch ? JSON.parse(arrMatch[0]) : [];
 
-    const scoredJobs = jobs.slice(0, 30).map((job, i) => {
-      const s = scores.find((x) => x.index === i + 1);
-      return { ...job, score: s?.score ?? 50, matchReasons: s?.reasons ?? [] };
-    });
-
-    scoredJobs.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    const scoredJobs = top
+      .map((job, i) => {
+        const s = scores.find((x) => x.index === i + 1);
+        return { ...job, score: s?.score ?? 50, matchReasons: s?.reasons ?? [] };
+      })
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
     return Response.json({ jobs: scoredJobs });
   } catch (err) {

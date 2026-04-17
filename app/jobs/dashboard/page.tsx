@@ -67,6 +67,39 @@ function StatCard({
   );
 }
 
+function CoverLetterSection({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-hec-stone">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="text-xs text-hec-gold font-semibold flex items-center gap-1 active:scale-95 transition-all"
+      >
+        {open ? "▾" : "▸"} View cover letter
+      </button>
+      {open && (
+        <div className="mt-2 bg-hec-ivory rounded-xl p-3 relative">
+          <p className="text-xs text-hec-ink leading-relaxed whitespace-pre-wrap">{text}</p>
+          <button
+            onClick={copy}
+            className="mt-2 text-xs text-hec-gold font-semibold active:scale-95 transition-all"
+          >
+            {copied ? "Copied ✓" : "Copy"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState<AppStatus | "all">("all");
@@ -221,6 +254,9 @@ export default function DashboardPage() {
                     </button>
                   ))}
                 </div>
+
+                {/* Cover letter */}
+                {app.coverLetter && <CoverLetterSection text={app.coverLetter} />}
 
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-hec-stone">
                   <a
