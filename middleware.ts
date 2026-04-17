@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIES, verifySessionToken } from "@/lib/auth";
 
 // Paths that bypass the student OTP login. `/admin` has its own password.
-const PUBLIC_PATHS = ["/login", "/api/auth", "/admin", "/api/admin", "/api/whatsapp"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/admin", "/api/admin", "/api/whatsapp", "/jobs", "/api/search-jobs", "/api/analyze-cv", "/api/apply-job", "/api/send-alerts"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
