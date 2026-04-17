@@ -26,6 +26,7 @@ const SOURCE_COLORS: Record<string, string> = {
   Remotive: "bg-green-50 text-green-700",
   "The Muse": "bg-purple-50 text-purple-700",
   Jobicy: "bg-orange-50 text-orange-700",
+  FindWork: "bg-red-50 text-red-700",
 };
 
 // ── Score badge ───────────────────────────────────────────────────────────────
@@ -194,7 +195,7 @@ function JobCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs text-slate-500">
-        <span>📍 {job.location}</span>
+        <span>{job.flag} {job.location}</span>
         <span>💼 {job.type}</span>
         <span>🕐 {job.postedAt}</span>
       </div>

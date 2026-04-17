@@ -52,11 +52,25 @@ interface JobicyJob {
   jobLevel: string;
 }
 
+interface FindWorkJob {
+  id: number;
+  role: string;
+  company_name: string;
+  employment_type: string;
+  location: string;
+  remote: boolean;
+  date_posted: string;
+  keywords: string[];
+  url: string;
+  text: string;
+}
+
 export interface UnifiedJob {
   id: string;
   title: string;
   company: string;
   location: string;
+  flag: string;
   type: string;
   url: string;
   description: string;
@@ -85,6 +99,32 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function locationFlag(loc: string): string {
+  const l = loc.toLowerCase();
+  if (!loc || loc === "—") return "🌍";
+  if (/remote|worldwide|anywhere|global/i.test(loc)) return "🌍";
+  if (/\busa\b|united states|\bny\b|\bca\b|\btx\b|\bsf\b|new york|san francisco|los angeles|chicago|seattle|boston|austin/.test(l)) return "🇺🇸";
+  if (/\buk\b|united kingdom|london|manchester|birmingham|edinburgh|england|scotland/.test(l)) return "🇬🇧";
+  if (/france|paris|lyon|marseille|bordeaux/.test(l)) return "🇫🇷";
+  if (/germany|deutschland|berlin|munich|münchen|hamburg|frankfurt|cologne/.test(l)) return "🇩🇪";
+  if (/canada|toronto|vancouver|montreal|calgary|ottawa/.test(l)) return "🇨🇦";
+  if (/australia|sydney|melbourne|brisbane|perth|adelaide/.test(l)) return "🇦🇺";
+  if (/spain|españa|madrid|barcelona|valencia|seville/.test(l)) return "🇪🇸";
+  if (/netherlands|amsterdam|rotterdam|the hague|eindhoven/.test(l)) return "🇳🇱";
+  if (/switzerland|zurich|zürich|geneva|bern/.test(l)) return "🇨🇭";
+  if (/sweden|stockholm|gothenburg|malmö/.test(l)) return "🇸🇪";
+  if (/portugal|lisbon|lisboa|porto/.test(l)) return "🇵🇹";
+  if (/ireland|dublin|cork/.test(l)) return "🇮🇪";
+  if (/india|bangalore|bengaluru|mumbai|delhi|hyderabad|pune/.test(l)) return "🇮🇳";
+  if (/singapore/.test(l)) return "🇸🇬";
+  if (/brazil|brasil|são paulo|rio de janeiro/.test(l)) return "🇧🇷";
+  if (/poland|warsaw|kraków|wroclaw/.test(l)) return "🇵🇱";
+  if (/europe|emea/.test(l)) return "🇪🇺";
+  if (/latin america|latam/.test(l)) return "🌎";
+  if (/asia|apac/.test(l)) return "🌏";
+  return "📍";
+}
+
 async function fetchArbeitnow(query: string): Promise<UnifiedJob[]> {
   const res = await fetch(
     `https://arbeitnow.com/api/job-board-api?search=${encodeURIComponent(query)}`,
@@ -92,39 +132,47 @@ async function fetchArbeitnow(query: string): Promise<UnifiedJob[]> {
   );
   if (!res.ok) return [];
   const { data } = (await res.json()) as { data: ArbeitnowJob[] };
-  return data.slice(0, 20).map((j) => ({
-    id: `arbeitnow-${j.slug}`,
-    title: j.title,
-    company: j.company_name,
-    location: j.remote ? "Remote" : j.location || "—",
-    type: j.job_types[0] ?? "Full-time",
-    url: j.url,
-    description: stripHtml(j.description).slice(0, 500),
-    tags: j.tags.slice(0, 6),
-    source: "Arbeitnow",
-    postedAt: formatDate(j.created_at),
-  }));
+  return data.slice(0, 30).map((j) => {
+    const loc = j.remote ? "Remote" : j.location || "—";
+    return {
+      id: `arbeitnow-${j.slug}`,
+      title: j.title,
+      company: j.company_name,
+      location: loc,
+      flag: locationFlag(loc),
+      type: j.job_types[0] ?? "Full-time",
+      url: j.url,
+      description: stripHtml(j.description).slice(0, 500),
+      tags: j.tags.slice(0, 6),
+      source: "Arbeitnow",
+      postedAt: formatDate(j.created_at),
+    };
+  });
 }
 
 async function fetchRemotive(query: string): Promise<UnifiedJob[]> {
   const res = await fetch(
-    `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=20`,
+    `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=30`,
     { signal: AbortSignal.timeout(8000) },
   );
   if (!res.ok) return [];
   const { jobs } = (await res.json()) as { jobs: RemotiveJob[] };
-  return jobs.slice(0, 15).map((j) => ({
-    id: `remotive-${j.id}`,
-    title: j.title,
-    company: j.company_name,
-    location: j.candidate_required_location || "Remote",
-    type: j.job_type ?? "Full-time",
-    url: j.url,
-    description: stripHtml(j.description).slice(0, 500),
-    tags: j.tags.slice(0, 6),
-    source: "Remotive",
-    postedAt: formatDate(j.publication_date),
-  }));
+  return jobs.slice(0, 25).map((j) => {
+    const loc = j.candidate_required_location || "Worldwide";
+    return {
+      id: `remotive-${j.id}`,
+      title: j.title,
+      company: j.company_name,
+      location: loc,
+      flag: locationFlag(loc),
+      type: j.job_type ?? "Full-time",
+      url: j.url,
+      description: stripHtml(j.description).slice(0, 500),
+      tags: j.tags.slice(0, 6),
+      source: "Remotive",
+      postedAt: formatDate(j.publication_date),
+    };
+  });
 }
 
 async function fetchTheMuse(query: string): Promise<UnifiedJob[]> {
@@ -135,41 +183,73 @@ async function fetchTheMuse(query: string): Promise<UnifiedJob[]> {
   );
   if (!res.ok) return [];
   const { results } = (await res.json()) as { results: MuseJob[] };
-  return (results ?? []).slice(0, 15).map((j) => ({
-    id: `muse-${j.id}`,
-    title: j.name,
-    company: j.company.name,
-    location: j.locations?.[0]?.name ?? "—",
-    type: j.levels?.[0]?.name ?? "Full-time",
-    url: j.refs.landing_page,
-    description: stripHtml(j.contents ?? "").slice(0, 500),
-    tags: j.levels?.map((l) => l.name) ?? [],
-    source: "The Muse",
-    postedAt: formatDate(j.publication_date),
-  }));
+  return (results ?? []).slice(0, 20).map((j) => {
+    const loc = j.locations?.[0]?.name ?? "—";
+    return {
+      id: `muse-${j.id}`,
+      title: j.name,
+      company: j.company.name,
+      location: loc,
+      flag: locationFlag(loc),
+      type: j.levels?.[0]?.name ?? "Full-time",
+      url: j.refs.landing_page,
+      description: stripHtml(j.contents ?? "").slice(0, 500),
+      tags: j.levels?.map((l) => l.name) ?? [],
+      source: "The Muse",
+      postedAt: formatDate(j.publication_date),
+    };
+  });
 }
 
 async function fetchJobicy(query: string): Promise<UnifiedJob[]> {
-  // Jobicy uses tag-based search; take first meaningful keyword
   const tag = encodeURIComponent(query.split(/\s+/)[0] ?? "developer");
   const res = await fetch(
-    `https://jobicy.com/api/v2/remote-jobs?count=15&tag=${tag}`,
+    `https://jobicy.com/api/v2/remote-jobs?count=20&tag=${tag}`,
     { signal: AbortSignal.timeout(8000) },
   );
   if (!res.ok) return [];
   const data = (await res.json()) as { jobs?: JobicyJob[] };
-  return (data.jobs ?? []).slice(0, 12).map((j) => ({
-    id: `jobicy-${j.id}`,
-    title: j.jobTitle,
-    company: j.companyName,
-    location: j.jobGeo || "Remote",
-    type: j.jobType?.[0] ?? "Full-time",
-    url: j.url,
-    description: stripHtml(j.jobDescription ?? "").slice(0, 500),
-    tags: [...(j.jobIndustry ?? []), j.jobLevel].filter(Boolean).slice(0, 5),
-    source: "Jobicy",
-    postedAt: formatDate(j.pubDate),
-  }));
+  return (data.jobs ?? []).slice(0, 18).map((j) => {
+    const loc = j.jobGeo || "Remote";
+    return {
+      id: `jobicy-${j.id}`,
+      title: j.jobTitle,
+      company: j.companyName,
+      location: loc,
+      flag: locationFlag(loc),
+      type: j.jobType?.[0] ?? "Full-time",
+      url: j.url,
+      description: stripHtml(j.jobDescription ?? "").slice(0, 500),
+      tags: [...(j.jobIndustry ?? []), j.jobLevel].filter(Boolean).slice(0, 5),
+      source: "Jobicy",
+      postedAt: formatDate(j.pubDate),
+    };
+  });
+}
+
+async function fetchFindWork(query: string): Promise<UnifiedJob[]> {
+  const res = await fetch(
+    `https://findwork.dev/api/jobs/?search=${encodeURIComponent(query)}&order_by=-date`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { results?: FindWorkJob[] };
+  return (data.results ?? []).slice(0, 20).map((j) => {
+    const loc = j.remote ? "Remote" : j.location || "—";
+    return {
+      id: `findwork-${j.id}`,
+      title: j.role,
+      company: j.company_name,
+      location: loc,
+      flag: locationFlag(loc),
+      type: j.employment_type || "Full-time",
+      url: j.url,
+      description: stripHtml(j.text ?? "").slice(0, 500),
+      tags: (j.keywords ?? []).slice(0, 6),
+      source: "FindWork",
+      postedAt: formatDate(j.date_posted),
+    };
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -178,12 +258,13 @@ export async function POST(req: NextRequest) {
     const query: string = body.query ?? "";
     const profile = body.profile ?? null;
 
-    // Fetch all sources in parallel
+    // Fetch all 5 sources in parallel
     const results = await Promise.allSettled([
       fetchArbeitnow(query),
       fetchRemotive(query),
       fetchTheMuse(query),
       fetchJobicy(query),
+      fetchFindWork(query),
     ]);
 
     const jobs: UnifiedJob[] = results.flatMap((r) =>
@@ -191,15 +272,14 @@ export async function POST(req: NextRequest) {
     );
 
     if (jobs.length === 0) return Response.json({ jobs: [] });
-
-    if (!profile) return Response.json({ jobs: jobs.slice(0, 50) });
+    if (!profile) return Response.json({ jobs: jobs.slice(0, 60) });
 
     // Score with Claude when CV profile is provided
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return Response.json({ jobs: jobs.slice(0, 50) });
+    if (!apiKey) return Response.json({ jobs: jobs.slice(0, 60) });
 
     const client = new Anthropic({ apiKey });
-    const top = jobs.slice(0, 30);
+    const top = jobs.slice(0, 40);
     const jobList = top
       .map(
         (j, i) =>
@@ -209,7 +289,7 @@ export async function POST(req: NextRequest) {
 
     const scoreMsg = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      max_tokens: 3000,
       system: "Job matching assistant. Return only a valid JSON array, no markdown.",
       messages: [
         {
