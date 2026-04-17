@@ -1,6 +1,4 @@
 import { NextRequest } from "next/server";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
 
 export const runtime = "nodejs";
 
@@ -30,6 +28,8 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
     let text = "";
     try {
       const pdf = await pdfParse(buffer);
