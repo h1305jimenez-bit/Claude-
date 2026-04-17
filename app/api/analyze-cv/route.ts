@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require("pdf-parse");
+const _pdfMod = require("pdf-parse");
+const pdfParse: (buffer: Buffer) => Promise<{ text: string }> =
+  _pdfMod.default ?? _pdfMod;
 
 export const runtime = "nodejs";
 
@@ -35,8 +37,12 @@ export async function POST(req: NextRequest) {
     try {
       const pdf = await pdfParse(buffer);
       text = pdf.text.slice(0, 10_000);
-    } catch {
-      return Response.json({ error: "Could not read PDF. Please try a text-based PDF." }, { status: 422 });
+    } catch (pdfErr) {
+      console.error("[analyze-cv] pdf-parse error:", pdfErr);
+      return Response.json(
+        { error: `Could not read PDF: ${pdfErr instanceof Error ? pdfErr.message : String(pdfErr)}` },
+        { status: 422 },
+      );
     }
 
     if (!text.trim()) {
