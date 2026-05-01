@@ -63,6 +63,26 @@ export default function HomePage() {
             ›
           </span>
         </Link>
+
+        <Link
+          href="/election"
+          className="group flex items-center gap-4 rounded-2xl border border-hec-stone bg-white p-5 shadow-card transition hover:border-hec-navy"
+        >
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-hec-navy/10 text-4xl">
+            🗳️
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-hec-navy">
+              MBA Elections
+            </h2>
+            <p className="text-sm text-slate-600">
+              Vote for your MBA 2025 class representatives.
+            </p>
+          </div>
+          <span className="text-xl text-hec-navy/30 transition group-hover:text-hec-navy">
+            ›
+          </span>
+        </Link>
       </section>
 
       <section className="rounded-2xl border border-dashed border-hec-stone p-4 text-sm text-slate-600">
