@@ -20,12 +20,7 @@ export function Header({ email }: { email: string | null }) {
   return (
     <header className="sticky top-0 z-20 border-b border-hec-blue/30 bg-hec-navy text-white">
       <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl">🎓</span>
-          <span className="text-sm font-semibold tracking-tight sm:text-base">
-            HEC Campus Delivery
-          </span>
-        </Link>
+        <Link href="/" className="flex items-center gap-2" />
         <div className="flex items-center gap-2">
           <Link
             href="/cart"
