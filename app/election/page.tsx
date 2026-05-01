@@ -19,7 +19,7 @@ export default async function ElectionPage() {
         />
         <div className="relative">
           <div className="text-xs font-semibold uppercase tracking-[0.15em] text-hec-gold">
-            HEC Paris · MBA 2025
+            HEC Paris · MBA 2026
           </div>
           <h1 className="mt-2 text-2xl font-bold leading-tight">
             Class Elections 🗳️

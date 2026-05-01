@@ -12,74 +12,53 @@ export interface Position {
   candidates: Candidate[];
 }
 
+function placeholder(clubId: string, category: "Social" | "Professional"): Candidate[] {
+  return [
+    {
+      id: `${clubId}-candidate-a`,
+      name: "Candidate A",
+      program: "MBA 2026",
+      emoji: category === "Social" ? "🎉" : "💼",
+      pitch: "TBD",
+    },
+    {
+      id: `${clubId}-candidate-b`,
+      name: "Candidate B",
+      program: "MBA 2026",
+      emoji: category === "Social" ? "🌍" : "📊",
+      pitch: "TBD",
+    },
+  ];
+}
+
 export const POSITIONS: Position[] = [
-  {
-    id: "president",
-    title: "Class President",
-    candidates: [
-      {
-        id: "alice-dupont",
-        name: "Alice Dupont",
-        program: "MBA 2025",
-        emoji: "👩‍💼",
-        pitch: "Bridging cultures on campus and amplifying every student's voice in faculty decisions.",
-      },
-      {
-        id: "marco-rossi",
-        name: "Marco Rossi",
-        program: "MBA 2025",
-        emoji: "👨‍💼",
-        pitch: "Four years in consulting — I know how to get things done. Let's make this cohort legendary.",
-      },
-      {
-        id: "priya-sharma",
-        name: "Priya Sharma",
-        program: "MBA 2025",
-        emoji: "👩‍🎓",
-        pitch: "Inclusive leadership starts with listening. I'll hold monthly open forums and publish action logs.",
-      },
-    ],
-  },
-  {
-    id: "vp-social",
-    title: "VP Social",
-    candidates: [
-      {
-        id: "lucas-meyer",
-        name: "Lucas Meyer",
-        program: "MBA 2025",
-        emoji: "🎉",
-        pitch: "Epic events, tight budget. My first act: a rooftop networking night in Jouy-en-Josas.",
-      },
-      {
-        id: "sofia-kim",
-        name: "Sofia Kim",
-        program: "MBA 2025",
-        emoji: "🌍",
-        pitch: "International nights, weekend hikes, and a proper end-of-year gala — all on the agenda.",
-      },
-    ],
-  },
-  {
-    id: "vp-academics",
-    title: "VP Academics",
-    candidates: [
-      {
-        id: "james-okafor",
-        name: "James Okafor",
-        program: "MBA 2025",
-        emoji: "📚",
-        pitch: "I'll push for more electives, better study-group spaces, and direct professor feedback loops.",
-      },
-      {
-        id: "mei-chen",
-        name: "Mei Chen",
-        program: "MBA 2025",
-        emoji: "🎓",
-        pitch: "Academic excellence + well-being. I'll negotiate deadline flexibility and peer-tutoring credits.",
-      },
-    ],
-  },
+  // — Social clubs —
+  { id: "mba-council",           title: "MBA Council",                          candidates: placeholder("mba-council", "Social") },
+  { id: "mba-africa",            title: "MBA Africa Club",                       candidates: placeholder("mba-africa", "Social") },
+  { id: "mba-apac",              title: "MBA Asia Pacific Business Club (APAC)", candidates: placeholder("mba-apac", "Social") },
+  { id: "mba-international",     title: "MBA International Club",                candidates: placeholder("mba-international", "Social") },
+  { id: "mba-mena",              title: "MBA Middle East & North Africa Club",   candidates: placeholder("mba-mena", "Social") },
+  { id: "mba-latam",             title: "MBA Latin America Club (LatAm)",        candidates: placeholder("mba-latam", "Social") },
+  { id: "mba-lgbtqia",           title: "MBA LGBTQIA+ and Allies Club",          candidates: placeholder("mba-lgbtqia", "Social") },
+  { id: "mba-wine-spirits",      title: "MBA Wine, Spirits & Beer Society",      candidates: placeholder("mba-wine-spirits", "Social") },
+  { id: "mba-women-leadership",  title: "MBA Women in Leadership Club",          candidates: placeholder("mba-women-leadership", "Social") },
+  // — Professional clubs —
+  { id: "mba-arts-media",        title: "MBA Arts Media Entertainment Club",     candidates: placeholder("mba-arts-media", "Professional") },
+  { id: "mba-consulting",        title: "MBA Consulting Club",                   candidates: placeholder("mba-consulting", "Professional") },
+  { id: "mba-consulting-practice", title: "The Consulting Practice at HEC Paris (MBA)", candidates: placeholder("mba-consulting-practice", "Professional") },
+  { id: "mba-energy",            title: "MBA Energy Club",                       candidates: placeholder("mba-energy", "Professional") },
+  { id: "mba-entrepreneurship",  title: "MBA Entrepreneurship Club",             candidates: placeholder("mba-entrepreneurship", "Professional") },
+  { id: "mba-fmcg",              title: "MBA FMCG",                              candidates: placeholder("mba-fmcg", "Professional") },
+  { id: "mba-healthcare",        title: "MBA Healthcare Club",                   candidates: placeholder("mba-healthcare", "Professional") },
+  { id: "mba-luxury",            title: "MBA Luxury Club",                       candidates: placeholder("mba-luxury", "Professional") },
+  { id: "mba-marketing",         title: "MBA Marketing Club",                    candidates: placeholder("mba-marketing", "Professional") },
+  { id: "mba-finance",           title: "MBA FinanceClub",                       candidates: placeholder("mba-finance", "Professional") },
+  { id: "mba-product-mgmt",      title: "MBA Product Management Club",           candidates: placeholder("mba-product-mgmt", "Professional") },
+  { id: "mba-real-estate",       title: "MBA Real Estate Club",                  candidates: placeholder("mba-real-estate", "Professional") },
+  { id: "mba-search-fund",       title: "MBA Search Fund Club",                  candidates: placeholder("mba-search-fund", "Professional") },
+  { id: "mba-sports-investment",  title: "MBA Sports Investment Club",           candidates: placeholder("mba-sports-investment", "Professional") },
+  { id: "mba-sustainability",    title: "MBA Sustainability Club",                candidates: placeholder("mba-sustainability", "Professional") },
+  { id: "mba-tech",              title: "MBA Tech Club",                          candidates: placeholder("mba-tech", "Professional") },
 ];
 
 interface VoteRecord {
