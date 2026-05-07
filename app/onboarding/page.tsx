@@ -34,9 +34,15 @@ export default function OnboardingPage() {
     setUploading(true);
     setError("");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
       const formData = new FormData();
       formData.append("cv", cvFile);
-      const res = await fetch("/api/user/upload-cv", { method: "POST", body: formData });
+      const res = await fetch("/api/user/upload-cv", {
+        method: "POST",
+        headers: { "x-access-token": session.access_token },
+        body: formData,
+      });
       const data = await res.json() as { path?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setCvUploaded(true);

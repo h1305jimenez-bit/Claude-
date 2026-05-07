@@ -91,9 +91,15 @@ export default function ProfilePage() {
     setUploadingCv(true);
     setMessage("");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
       const formData = new FormData();
       formData.append("cv", cvFile);
-      const res = await fetch("/api/user/upload-cv", { method: "POST", body: formData });
+      const res = await fetch("/api/user/upload-cv", {
+        method: "POST",
+        headers: { "x-access-token": session.access_token },
+        body: formData,
+      });
       const data = await res.json() as { path?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setMessage("CV updated. Job scores will refresh on next fetch.");
