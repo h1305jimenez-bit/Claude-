@@ -1,39 +1,36 @@
-import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
+import type { Metadata } from "next";
+import { Syne, DM_Sans } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from "@/components/CartProvider";
-import { Header } from "@/components/Header";
-import { AUTH_COOKIES, verifySessionToken } from "@/lib/auth";
+
+const syne = Syne({
+  subsets: ["latin"],
+  weight: ["700", "800"],
+  variable: "--font-syne",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "HEC Campus Delivery",
+  title: "ApplyPilot — Know what you're walking into. Apply in 3 minutes.",
   description:
-    "Order Auchan groceries or book laundry service straight to your HEC Paris dorm. Pay with Revolut.",
-  manifest: "/manifest.webmanifest",
+    "ApplyPilot fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.",
 };
 
-export const viewport: Viewport = {
-  themeColor: "#0C2340",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const token = cookies().get(AUTH_COOKIES.session)?.value;
-  const session = token ? await verifySessionToken(token) : null;
-
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-hec-ivory text-hec-ink">
-        <CartProvider>
-          <Header email={session?.email ?? null} />
-          <main className="mx-auto max-w-xl px-4 pb-24 pt-4">{children}</main>
-        </CartProvider>
+    <html lang="en" className={`${syne.variable} ${dmSans.variable}`}>
+      <body className="font-dm-sans min-h-screen bg-background text-text-primary">
+        {children}
       </body>
     </html>
   );

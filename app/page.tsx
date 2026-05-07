@@ -1,83 +1,146 @@
 import Link from "next/link";
 
-export default function HomePage() {
+export default function LandingPage() {
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl bg-hec-navy p-6 text-white shadow-card">
-        <div
-          aria-hidden
-          className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-hec-gold/20 blur-3xl"
-        />
-        <div className="relative">
-          <div className="text-xs font-semibold uppercase tracking-[0.15em] text-hec-gold">
-            HEC Paris · Campus delivery
+    <main className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <span className="font-syne font-bold text-xl text-text-primary">ApplyPilot</span>
+          <div className="flex items-center gap-4">
+            <Link href="/auth" className="text-sm text-text-dimmed hover:text-text-primary transition-all duration-[150ms] font-dm-sans">
+              Log in
+            </Link>
+            <Link href="/auth" className="text-sm px-4 py-2 bg-btn-bg text-btn-text rounded-[8px] font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
+              Get started free
+            </Link>
           </div>
-          <h1 className="mt-2 text-2xl font-bold leading-tight">
-            Hey HECien 👋
-          </h1>
-          <p className="mt-1 text-sm text-white/80">
-            Order from the Auchan across the street, or book laundry to your
-            dorm. Pay in one tap with Revolut.
-          </p>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="max-w-5xl mx-auto px-6 py-24 text-center">
+        <h1 className="font-syne font-extrabold text-5xl md:text-6xl text-text-primary leading-tight mb-6">
+          Know what you&apos;re walking into.<br />Apply in 3 minutes.
+        </h1>
+        <p className="text-lg text-text-dimmed font-dm-sans font-light max-w-xl mx-auto mb-10">
+          ApplyPilot fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/auth" className="px-6 py-3 bg-btn-bg text-btn-text rounded-[8px] font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms]">
+            Get started free →
+          </Link>
+          <Link href="/waitlist" className="px-6 py-3 border border-border text-text-primary rounded-[8px] font-dm-sans hover:bg-surface transition-all duration-[150ms]">
+            Join waitlist
+          </Link>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4">
-        <Link
-          href="/auchan"
-          className="group flex items-center gap-4 rounded-2xl border border-hec-stone bg-white p-5 shadow-card transition hover:border-hec-navy"
-        >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-hec-sand text-4xl">
-            🛒
+      {/* How it works */}
+      <section className="border-t border-border py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">How it works</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                step: "01",
+                title: "Upload your CV",
+                desc: "Upload your PDF. We parse it and build your profile.",
+              },
+              {
+                step: "02",
+                title: "Get matched jobs",
+                desc: "We fetch live jobs from Adzuna and score each one against your CV.",
+              },
+              {
+                step: "03",
+                title: "Apply with a full kit",
+                desc: "Generate a cover letter, tailored CV, and screening answers in seconds.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="border border-border rounded-[8px] p-6 bg-surface">
+                <span className="font-syne font-bold text-3xl text-text-dimmed block mb-3">{item.step}</span>
+                <h3 className="font-dm-sans font-medium text-text-primary mb-2">{item.title}</h3>
+                <p className="text-sm text-text-dimmed font-dm-sans font-light">{item.desc}</p>
+              </div>
+            ))}
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-hec-navy">
-              Auchan groceries
-            </h2>
-            <p className="text-sm text-slate-600">
-              From the Auchan right in front of campus. Dropped at your dorm
-              in under 2 h.
-            </p>
-          </div>
-          <span className="text-xl text-hec-navy/30 transition group-hover:text-hec-navy">
-            ›
-          </span>
-        </Link>
-
-        <Link
-          href="/laundry"
-          className="group flex items-center gap-4 rounded-2xl border border-hec-stone bg-white p-5 shadow-card transition hover:border-hec-navy"
-        >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-hec-gold-soft text-4xl">
-            🧺
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-hec-navy">
-              Campus laundry
-            </h2>
-            <p className="text-sm text-slate-600">
-              Wash for 3 €/kg or dry for 2 €/kg. Pickup at your building.
-            </p>
-          </div>
-          <span className="text-xl text-hec-navy/30 transition group-hover:text-hec-navy">
-            ›
-          </span>
-        </Link>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-dashed border-hec-stone p-4 text-sm text-slate-600">
-        <h3 className="mb-1 font-semibold text-hec-navy">How it works</h3>
-        <ol className="list-inside list-decimal space-y-1">
-          <li>Sign in with your @hec.edu email.</li>
-          <li>Pick the service and add items.</li>
-          <li>Tell us your building letter, room and preferred slot.</li>
-          <li>
-            Pay with <span className="font-semibold text-revolut-blue">Revolut</span>{" "}
-            in one click.
-          </li>
-          <li>We drop off at your door.</li>
-        </ol>
+      {/* Features */}
+      <section className="py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">Features</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                title: "Job scoring",
+                desc: "Claude scores every job 0–100 based on your CV, role, location, and seniority.",
+              },
+              {
+                title: "Full application kit",
+                desc: "Cover letter, ATS-optimised CV, likely screening questions, and skills gap analysis.",
+              },
+              {
+                title: "Application tracker",
+                desc: "Track every application, posting status, and follow-up in one clean board.",
+              },
+            ].map((f) => (
+              <div key={f.title} className="border border-border rounded-[8px] p-6 bg-surface">
+                <h3 className="font-dm-sans font-medium text-text-primary mb-2">{f.title}</h3>
+                <p className="text-sm text-text-dimmed font-dm-sans font-light">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
-    </div>
+
+      {/* Pricing */}
+      <section className="border-t border-border py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">Pricing</h2>
+          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <div className="border border-border rounded-[8px] p-8 bg-surface">
+              <h3 className="font-syne font-bold text-xl text-text-primary mb-2">Free</h3>
+              <p className="font-syne font-bold text-4xl text-text-primary mb-6">$0</p>
+              <ul className="space-y-2 text-sm text-text-dimmed font-dm-sans mb-8">
+                {["5 job refreshes per day", "Job scoring", "Application Preview", "Basic tracker"].map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <span>—</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth" className="block w-full text-center py-3 border border-border rounded-[8px] text-sm font-dm-sans hover:bg-surface-secondary transition-all duration-[150ms]">
+                Start free
+              </Link>
+            </div>
+            <div className="border border-btn-bg rounded-[8px] p-8 bg-btn-bg text-btn-text">
+              <h3 className="font-syne font-bold text-xl mb-2">Pro</h3>
+              <p className="font-syne font-bold text-4xl mb-1">$9</p>
+              <p className="text-sm opacity-60 font-dm-sans mb-6">per month</p>
+              <ul className="space-y-2 text-sm opacity-80 font-dm-sans mb-8">
+                {["Everything in Free", "Full application kits", "Cover letter + tailored CV", "Screening answers", "Skills gap analysis", "Follow-up generator"].map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <span>—</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth" className="block w-full text-center py-3 bg-background text-text-primary rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
+                Get started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="font-syne font-bold text-text-primary">ApplyPilot</span>
+          <p className="text-sm text-text-dimmed font-dm-sans">© 2025 ApplyPilot. All rights reserved.</p>
+        </div>
+      </footer>
+    </main>
   );
 }
