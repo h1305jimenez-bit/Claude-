@@ -11,6 +11,7 @@ type ProfileTab = (typeof TABS)[number];
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [tab, setTab] = useState<ProfileTab>("Profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +40,7 @@ export default function ProfilePage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       if (!userId) { router.push("/auth"); return; }
+      setAccessToken(sessionData.session?.access_token ?? null);
 
       const { data } = await supabase.from("users").select("*").eq("id", userId).single();
       if (data) {
@@ -87,17 +89,15 @@ export default function ProfilePage() {
   };
 
   const handleCvUpload = async () => {
-    if (!cvFile) return;
+    if (!cvFile || !accessToken) return;
     setUploadingCv(true);
     setMessage("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
       const formData = new FormData();
       formData.append("cv", cvFile);
       const res = await fetch("/api/user/upload-cv", {
         method: "POST",
-        headers: { "x-access-token": session.access_token },
+        headers: { "x-access-token": accessToken },
         body: formData,
       });
       const data = await res.json() as { path?: string; error?: string };

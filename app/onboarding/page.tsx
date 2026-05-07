@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -25,22 +25,29 @@ export default function OnboardingPage() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const supabase = createBrowserSupabase();
   const router = useRouter();
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { router.push("/auth"); return; }
+      setAccessToken(session.access_token);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleCvUpload = async () => {
-    if (!cvFile) return;
+    if (!cvFile || !accessToken) return;
     setUploading(true);
     setError("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
       const formData = new FormData();
       formData.append("cv", cvFile);
       const res = await fetch("/api/user/upload-cv", {
         method: "POST",
-        headers: { "x-access-token": session.access_token },
+        headers: { "x-access-token": accessToken },
         body: formData,
       });
       const data = await res.json() as { path?: string; error?: string };
