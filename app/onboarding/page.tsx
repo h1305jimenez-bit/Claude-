@@ -34,32 +34,11 @@ export default function OnboardingPage() {
     setUploading(true);
     setError("");
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-      if (!userId) throw new Error("Not authenticated");
-
-      // Upload PDF to Supabase Storage
-      const { data: uploadData, error: uploadErr } = await supabase.storage
-        .from("cvs")
-        .upload(`${userId}/cv.pdf`, cvFile, { upsert: true });
-
-      if (uploadErr) throw uploadErr;
-
-      // Parse PDF text via API
       const formData = new FormData();
       formData.append("cv", cvFile);
-      const parseRes = await fetch("/api/user/upload-cv", {
-        method: "POST",
-        body: formData,
-      });
-      const parseData = await parseRes.json() as { text?: string; error?: string };
-      if (!parseRes.ok) throw new Error(parseData.error ?? "Parse failed");
-
-      await supabase.from("users").update({
-        cv_url: uploadData?.path,
-        cv_text: parseData.text,
-      }).eq("id", userId);
-
+      const res = await fetch("/api/user/upload-cv", { method: "POST", body: formData });
+      const data = await res.json() as { path?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setCvUploaded(true);
       setStep(2);
     } catch (err: unknown) {

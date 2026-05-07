@@ -91,26 +91,11 @@ export default function ProfilePage() {
     setUploadingCv(true);
     setMessage("");
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-      if (!userId) return;
-
-      const { data: uploadData, error: uploadErr } = await supabase.storage
-        .from("cvs")
-        .upload(`${userId}/cv.pdf`, cvFile, { upsert: true });
-      if (uploadErr) throw uploadErr;
-
       const formData = new FormData();
       formData.append("cv", cvFile);
-      const parseRes = await fetch("/api/user/upload-cv", { method: "POST", body: formData });
-      const parseData = await parseRes.json() as { text?: string; error?: string };
-      if (!parseRes.ok) throw new Error(parseData.error ?? "Parse failed");
-
-      await supabase.from("users").update({
-        cv_url: uploadData?.path,
-        cv_text: parseData.text,
-      }).eq("id", userId);
-
+      const res = await fetch("/api/user/upload-cv", { method: "POST", body: formData });
+      const data = await res.json() as { path?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setMessage("CV updated. Job scores will refresh on next fetch.");
       setCvFile(null);
     } catch (err: unknown) {
