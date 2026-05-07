@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createApiClient, supabaseAdmin } from "@/lib/supabase";
+import { createApiClient } from "@/lib/supabase";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string; numpages: number }>;
 
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     const parsed = await pdfParse(buffer);
     const text = parsed.text.slice(0, 8000);
 
-    // Upload to storage using service key (bypasses RLS/key format issues)
-    const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+    // Upload to storage using authenticated session (RLS allows user to write their own folder)
+    const { data: uploadData, error: uploadErr } = await supabase.storage
       .from("cvs")
       .upload(`${userId}/cv.pdf`, buffer, {
         contentType: "application/pdf",
@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
       });
     if (uploadErr) throw uploadErr;
 
-    // Update user record
-    await supabaseAdmin
+    // Update user record (RLS allows user to update their own row)
+    await supabase
       .from("users")
       .update({ cv_url: uploadData.path, cv_text: text })
       .eq("id", userId);
