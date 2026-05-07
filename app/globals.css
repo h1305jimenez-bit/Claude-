@@ -5,23 +5,19 @@
 html,
 body {
   height: 100%;
-  background-color: #FAF7F0;
-  color: #051838;
+  background-color: #ffffff;
+  color: #0d0d0d;
   -webkit-tap-highlight-color: transparent;
 }
 
 * {
   -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
 
-/* Mobile tweaks */
 input,
 select,
 textarea,
 button {
-  font-size: 16px; /* prevents iOS auto-zoom on focus */
-}
-
-.safe-bottom {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  font-size: 16px;
 }
