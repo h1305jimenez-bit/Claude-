@@ -9,7 +9,7 @@ type ExtractedPrefs = {
   target_role: string; seniority: string; salary_expectation: string; work_authorization: string;
 };
 
-async function extractFromPdf(buffer: Buffer): Promise<{ prefs: ExtractedPrefs; cvText: string } | null> {
+async function extractFromPdf(buffer: Buffer): Promise<{ prefs: ExtractedPrefs; cvText: string; error?: string } | null> {
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -31,12 +31,12 @@ name, phone, linkedin, education (degree + institution), target_role (most recen
     });
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
+    if (!jsonMatch) return { prefs: {} as ExtractedPrefs, cvText: "", error: `no-json: ${raw.slice(0, 200)}` };
     const parsed = JSON.parse(jsonMatch[0]) as ExtractedPrefs & { cv_text?: string };
     const { cv_text, ...prefs } = parsed;
     return { prefs, cvText: cv_text ?? "" };
-  } catch {
-    return null;
+  } catch (e) {
+    return { prefs: {} as ExtractedPrefs, cvText: "", error: (e as { message?: string }).message ?? String(e) };
   }
 }
 
@@ -106,8 +106,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       path: `${userId}/cv.pdf`,
-      prefsExtracted: !!prefs,
+      prefsExtracted: !!prefs && !extracted?.error,
       prefs: prefs ?? {},
+      extractError: extracted?.error ?? null,
     });
   } catch (err) {
     const msg = (err as { message?: string }).message ?? String(err);

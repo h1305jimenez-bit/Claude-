@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [uploadingCv, setUploadingCv] = useState(false);
   const [message, setMessage] = useState("");
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [preferences, setPreferences] = useState({
     name: "",
@@ -99,10 +100,11 @@ export default function ProfilePage() {
         body: cvFile,
       });
       const data = await res.json() as {
-        path?: string; prefsExtracted?: boolean; error?: string;
+        path?: string; prefsExtracted?: boolean; error?: string; extractError?: string | null;
         prefs?: { name?: string; phone?: string; linkedin?: string; education?: string;
           target_role?: string; seniority?: string; salary_expectation?: string; work_authorization?: string };
       };
+      setDebugInfo(`prefsExtracted=${data.prefsExtracted} | extractError=${data.extractError ?? "none"}`);
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setCvFile(null);
       if (data.prefsExtracted && data.prefs) {
@@ -179,6 +181,12 @@ export default function ProfilePage() {
         {message && (
           <div className="border border-border rounded-[8px] p-3 bg-surface mb-6 text-sm font-dm-sans text-text-primary">
             {message}
+          </div>
+        )}
+
+        {debugInfo && (
+          <div className="border border-yellow-400 rounded-[8px] p-3 bg-yellow-50 mb-6 text-xs font-mono text-yellow-900 break-all">
+            {debugInfo}
           </div>
         )}
 
