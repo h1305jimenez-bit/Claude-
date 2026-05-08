@@ -9,37 +9,32 @@ type ExtractedPrefs = {
   target_role: string; seniority: string; salary_expectation: string; work_authorization: string;
 };
 
-async function extractPdfText(buffer: Buffer): Promise<string> {
-  try {
-    // Use the internal path to bypass pdf-parse's test file loading (which crashes on Vercel)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require("pdf-parse/lib/pdf-parse.js") as (b: Buffer) => Promise<{ text: string }>;
-    const result = await pdfParse(buffer);
-    return result.text.slice(0, 8000);
-  } catch {
-    return "";
-  }
-}
-
-async function extractPrefsFromCv(cvText: string): Promise<ExtractedPrefs | null> {
-  if (!cvText) return null;
+async function extractFromPdf(buffer: Buffer): Promise<{ prefs: ExtractedPrefs; cvText: string } | null> {
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
+      max_tokens: 1024,
       messages: [{
         role: "user",
-        content: `Extract information from this CV. Return ONLY a valid JSON object with these exact keys (use empty string if not found):
-name, phone, linkedin, education (degree + institution), target_role (most recent job title or role they are applying for), seniority (one of: Intern/Junior/Mid-level/Senior/Lead/Manager/Director/Executive), salary_expectation, work_authorization.
-
-CV:
-${cvText.substring(0, 4000)}`,
+        content: [
+          {
+            type: "document",
+            source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") },
+          } as never,
+          {
+            type: "text",
+            text: `Extract information from this CV. Return ONLY a valid JSON object with these exact keys (use empty string if not found):
+name, phone, linkedin, education (degree + institution), target_role (most recent job title or role they are applying for), seniority (one of: Intern/Junior/Mid-level/Senior/Lead/Manager/Director/Executive), salary_expectation, work_authorization, cv_text (full CV text content, max 6000 chars).`,
+          },
+        ],
       }],
     });
-    const text = msg.content[0].type === "text" ? msg.content[0].text : "";
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
-    return JSON.parse(jsonMatch[0]) as ExtractedPrefs;
+    const parsed = JSON.parse(jsonMatch[0]) as ExtractedPrefs & { cv_text?: string };
+    const { cv_text, ...prefs } = parsed;
+    return { prefs, cvText: cv_text ?? "" };
   } catch {
     return null;
   }
@@ -70,11 +65,10 @@ export async function POST(req: NextRequest) {
     if (!arrayBuffer.byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     const buffer = Buffer.from(arrayBuffer);
 
-    step = "parse-pdf";
-    const cvText = await extractPdfText(buffer);
-
     step = "extract-prefs";
-    const prefs = await extractPrefsFromCv(cvText);
+    const extracted = await extractFromPdf(buffer);
+    const prefs = extracted?.prefs ?? null;
+    const cvText = extracted?.cvText ?? "";
 
     const authHeaders = { "Authorization": `Bearer ${accessToken}`, "apikey": ANON_KEY };
 
@@ -114,7 +108,6 @@ export async function POST(req: NextRequest) {
       path: `${userId}/cv.pdf`,
       prefsExtracted: !!prefs,
       prefs: prefs ?? {},
-      debug: { textLength: cvText.length, hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY },
     });
   } catch (err) {
     const msg = (err as { message?: string }).message ?? String(err);
