@@ -21,12 +21,14 @@ export async function POST(req: NextRequest) {
 
     step = "check-config";
     if (!SUPABASE_URL.startsWith("http")) {
-      return NextResponse.json({ error: "SUPABASE_URL not configured" }, { status: 500 });
+      return NextResponse.json({ error: `SUPABASE_URL not configured: ${SUPABASE_URL.substring(0, 20)}` }, { status: 500 });
     }
 
     step = "read-buffer";
     const arrayBuffer = await req.arrayBuffer();
-    if (!arrayBuffer.byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    const byteLength = arrayBuffer.byteLength;
+    if (!byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+
     const buffer = Buffer.from(arrayBuffer);
 
     const authHeaders = {
@@ -35,14 +37,12 @@ export async function POST(req: NextRequest) {
     };
 
     step = "storage-upload";
-    const storageRes = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/cvs/${userId}/cv.pdf`,
-      {
-        method: "POST",
-        headers: { ...authHeaders, "Content-Type": "application/pdf", "x-upsert": "true" },
-        body: buffer,
-      }
-    );
+    const storageUrl = `${SUPABASE_URL}/storage/v1/object/cvs/${userId}/cv.pdf`;
+    const storageRes = await fetch(storageUrl, {
+      method: "POST",
+      headers: { ...authHeaders, "Content-Type": "application/pdf", "x-upsert": "true" },
+      body: buffer,
+    });
     if (!storageRes.ok) {
       const errText = await storageRes.text();
       throw new Error(`Storage error (${storageRes.status}): ${errText}`);
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       throw new Error(`DB error (${updateRes.status}): ${errText}`);
     }
 
-    return NextResponse.json({ path: `${userId}/cv.pdf` });
+    return NextResponse.json({ path: `${userId}/cv.pdf`, bytes: byteLength });
   } catch (err) {
     const msg = (err as { message?: string }).message ?? String(err);
     console.error(`upload-cv [${step}]:`, msg);
