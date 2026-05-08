@@ -6,6 +6,8 @@ import { fetchAdzunaJobs, AdzunaJob } from "@/lib/adzuna";
 import { checkRefreshLimit } from "@/lib/gating";
 import type { User } from "@/lib/types";
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = cookies();
@@ -38,68 +40,47 @@ export async function POST(req: NextRequest) {
 
     // Fetch jobs from Adzuna
     const adzunaJobs = await fetchAdzunaJobs(user.target_role, user.target_location || "");
+    const jobsToScore = adzunaJobs.slice(0, 8);
 
-    // Score each job with Claude (batch to avoid rate limits)
-    const scoredJobs = [];
-    for (const job of adzunaJobs.slice(0, 15)) {
-      try {
-        const scoringPrompt = `You are a job matching expert. Score this job for this candidate.
-
-CANDIDATE CV:
-${user.cv_text.slice(0, 3000)}
-
-CANDIDATE PREFERENCES:
-Role: ${user.target_role}
+    const candidateContext = `Role: ${user.target_role}
 Location: ${user.target_location || "Any"}
 Seniority: ${user.seniority || "Not specified"}
+Background: ${(user.cv_text || "").slice(0, 1500)}`;
+
+    // Score all jobs in parallel using Haiku for speed
+    const results = await Promise.allSettled(
+      jobsToScore.map(async (job) => {
+        const scoringPrompt = `Score this job for this candidate. Return ONLY valid JSON.
+
+CANDIDATE:
+${candidateContext}
 
 JOB:
 Company: ${job.company?.display_name || "Unknown"}
 Title: ${job.title}
-Description: ${(job.description || "").slice(0, 1000)}
+Description: ${(job.description || "").slice(0, 800)}
 
-Return ONLY valid JSON, no other text:
-{
-  "score": <number 0-100>,
-  "rationale": "<one sentence why>",
-  "portal": "<ATS portal name: Workday/Greenhouse/Lever/Amazon Jobs/Google Careers/Email/Other>",
-  "needsLogin": <boolean>,
-  "steps": <number of application steps 1-8>,
-  "estimatedMinutes": <number>,
-  "applicationFlow": [
-    { "name": "<step name>", "detail": "<what happens>", "fields": ["<field1>", "<field2>"] }
-  ],
-  "tip": "<one specific tip about this portal or company>"
-}`;
+JSON format:
+{"score":<0-100>,"rationale":"<one sentence>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"applicationFlow":[{"name":"<step>","detail":"<what>","fields":["<field>"]}],"tip":"<one tip>"}`;
 
         const response = await anthropic.messages.create({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 600,
           messages: [{ role: "user", content: scoringPrompt }],
         });
 
         const content = response.content[0];
-        if (content.type !== "text") continue;
-
-        let parsed: {
-          score: number;
-          rationale: string;
-          portal: string;
-          needsLogin: boolean;
-          steps: number;
-          estimatedMinutes: number;
+        if (content.type !== "text") throw new Error("no text");
+        const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("no json");
+        const parsed = JSON.parse(jsonMatch[0]) as {
+          score: number; rationale: string; portal: string; needsLogin: boolean;
+          steps: number; estimatedMinutes: number;
           applicationFlow: { name: string; detail: string; fields: string[] }[];
           tip: string;
         };
-        try {
-          const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-          if (!jsonMatch) continue;
-          parsed = JSON.parse(jsonMatch[0]);
-        } catch {
-          continue;
-        }
 
-        scoredJobs.push({
+        return {
           user_id: userId,
           adzuna_id: job.id,
           company: job.company?.display_name || "Unknown",
@@ -118,12 +99,13 @@ Return ONLY valid JSON, no other text:
           posted_date: job.created,
           application_flow: parsed.applicationFlow,
           tip: parsed.tip,
-        });
-      } catch {
-        // Skip individual job scoring failures
-        continue;
-      }
-    }
+        };
+      })
+    );
+
+    const scoredJobs = results
+      .filter((r): r is PromiseFulfilledResult<typeof results[0] extends PromiseFulfilledResult<infer T> ? T : never> => r.status === "fulfilled")
+      .map((r) => r.value);
 
     // Upsert jobs (avoid duplicates by adzuna_id)
     if (scoredJobs.length > 0) {
