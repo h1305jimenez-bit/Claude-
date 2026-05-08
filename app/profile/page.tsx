@@ -89,41 +89,22 @@ export default function ProfilePage() {
   };
 
   const handleCvUpload = async () => {
-    if (!cvFile) { setMessage("debug: no file"); return; }
-    if (!accessToken) { setMessage("debug: no token"); return; }
+    if (!cvFile || !accessToken) return;
     setUploadingCv(true);
     setMessage("");
-    let step = "form";
     try {
-      step = "fetch";
       const res = await fetch("/api/user/upload-cv", {
         method: "POST",
-        headers: {
-          "x-access-token": accessToken,
-          "x-filename": encodeURIComponent(cvFile.name),
-          "Content-Type": "application/pdf",
-        },
+        headers: { "x-access-token": accessToken, "Content-Type": "application/pdf" },
         body: cvFile,
       });
-      step = `status:${res.status}`;
-      let rawText = "";
-      try { rawText = await res.text(); } catch (e2) {
-        throw new Error(`text() threw: ${(e2 as {message?:string}).message}`);
-      }
-      step = `parse:${res.status}`;
-      let data: { path?: string; error?: string };
-      try {
-        data = JSON.parse(rawText) as { path?: string; error?: string };
-      } catch {
-        throw new Error(`not-json(${res.status}): ${rawText.substring(0, 100)}`);
-      }
-      step = "check";
+      const data = await res.json() as { path?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setMessage("CV updated. Job scores will refresh on next fetch.");
       setCvFile(null);
     } catch (err: unknown) {
       const e = err as { message?: string };
-      setMessage(`[${step}] ${e.message ?? "Upload failed"}`);
+      setMessage(e.message ?? "Upload failed");
     } finally {
       setUploadingCv(false);
     }
@@ -226,7 +207,7 @@ export default function ProfilePage() {
                 disabled={!cvFile || uploadingCv}
                 className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
               >
-                {uploadingCv ? "Uploading..." : "Upload CV [v8]"}
+                {uploadingCv ? "Uploading..." : "Upload CV"}
               </button>
             </div>
           </div>
