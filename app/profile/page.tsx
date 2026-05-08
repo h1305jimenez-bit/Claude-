@@ -104,7 +104,13 @@ export default function ProfilePage() {
         body: formData,
       });
       step = "json";
-      const data = await res.json() as { path?: string; error?: string };
+      const rawText = await res.text();
+      let data: { path?: string; error?: string };
+      try {
+        data = JSON.parse(rawText) as { path?: string; error?: string };
+      } catch {
+        throw new Error(`HTTP ${res.status}: ${rawText.substring(0, 120)}`);
+      }
       step = "check";
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setMessage("CV updated. Job scores will refresh on next fetch.");
