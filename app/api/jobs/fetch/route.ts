@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "daily_limit_reached", remaining: 0 }, { status: 429 });
     }
 
-    if (!user.cv_text || !user.target_role) {
-      return NextResponse.json({ error: "Profile incomplete" }, { status: 400 });
+    if (!user.target_role) {
+      return NextResponse.json({ error: "Set a target role in your profile first." }, { status: 400 });
     }
 
     // Fetch jobs from Adzuna
