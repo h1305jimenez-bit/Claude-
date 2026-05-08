@@ -110,7 +110,12 @@ export async function POST(req: NextRequest) {
       throw new Error(`DB error (${updateRes.status}): ${errText}`);
     }
 
-    return NextResponse.json({ path: `${userId}/cv.pdf`, prefsExtracted: !!prefs, prefs: prefs ?? {} });
+    return NextResponse.json({
+      path: `${userId}/cv.pdf`,
+      prefsExtracted: !!prefs,
+      prefs: prefs ?? {},
+      debug: { textLength: cvText.length, hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY },
+    });
   } catch (err) {
     const msg = (err as { message?: string }).message ?? String(err);
     console.error(`upload-cv [${step}]:`, msg);
