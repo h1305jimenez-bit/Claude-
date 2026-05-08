@@ -13,7 +13,7 @@ async function extractFromPdf(buffer: Buffer): Promise<{ prefs: ExtractedPrefs; 
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      max_tokens: 512,
       messages: [{
         role: "user",
         content: [
@@ -24,7 +24,7 @@ async function extractFromPdf(buffer: Buffer): Promise<{ prefs: ExtractedPrefs; 
           {
             type: "text",
             text: `Extract information from this CV. Return ONLY a valid JSON object with these exact keys (use empty string if not found):
-name, phone, linkedin, education (degree + institution), target_role (most recent job title or role they are applying for), seniority (one of: Intern/Junior/Mid-level/Senior/Lead/Manager/Director/Executive), salary_expectation, work_authorization, cv_text (full CV text content, max 6000 chars).`,
+name, phone, linkedin, education (degree + institution), target_role (most recent job title or role they are applying for), seniority (one of: Intern/Junior/Mid-level/Senior/Lead/Manager/Director/Executive), salary_expectation, work_authorization.`,
           },
         ],
       }],
@@ -32,9 +32,8 @@ name, phone, linkedin, education (degree + institution), target_role (most recen
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { prefs: {} as ExtractedPrefs, cvText: "", error: `no-json: ${raw.slice(0, 200)}` };
-    const parsed = JSON.parse(jsonMatch[0]) as ExtractedPrefs & { cv_text?: string };
-    const { cv_text, ...prefs } = parsed;
-    return { prefs, cvText: cv_text ?? "" };
+    const prefs = JSON.parse(jsonMatch[0]) as ExtractedPrefs;
+    return { prefs, cvText: "" };
   } catch (e) {
     return { prefs: {} as ExtractedPrefs, cvText: "", error: (e as { message?: string }).message ?? String(e) };
   }
