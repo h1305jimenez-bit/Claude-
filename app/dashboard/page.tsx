@@ -5,6 +5,7 @@ import { createBrowserSupabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/Sidebar";
 import { JobRow } from "@/components/JobRow";
 import { RefreshMeter } from "@/components/RefreshMeter";
+import { AddJobModal } from "@/components/AddJobModal";
 import type { Job, User } from "@/lib/types";
 
 const STATUS_GROUPS = [
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [remaining, setRemaining] = useState(5);
   const [error, setError] = useState("");
+  const [showAddJob, setShowAddJob] = useState(false);
 
   const supabase = createBrowserSupabase();
 
@@ -118,14 +120,28 @@ export default function DashboardPage() {
       <div className="ml-56 flex-1 flex">
         {/* Main content */}
         <main className="flex-1 p-8 max-w-3xl">
-          <div className="mb-8">
-            <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">
-              {user?.target_role ? `Jobs for ${user.target_role}` : "Your jobs"}
-            </h1>
-            <p className="text-text-dimmed text-sm font-dm-sans">
-              Matched to your CV · scored by AI
-            </p>
+          <div className="mb-8 flex items-start justify-between">
+            <div>
+              <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">
+                {user?.target_role ? `Jobs for ${user.target_role}` : "Your jobs"}
+              </h1>
+              <p className="text-text-dimmed text-sm font-dm-sans">
+                Matched to your CV · scored by AI
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddJob(true)}
+              className="shrink-0 px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
+            >
+              + Add job
+            </button>
           </div>
+
+          {showAddJob && (
+            <AddJobModal
+              onClose={() => setShowAddJob(false)}
+            />
+          )}
 
           {error && (
             <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans">

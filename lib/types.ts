@@ -64,6 +64,19 @@ export interface Kit {
   generated_at: string;
 }
 
+export interface JobInsights {
+  id: string;
+  job_id: string;
+  user_id: string;
+  key_skills: { skill: string; required: boolean; description: string }[];
+  company_mission: string;
+  word_cloud: { word: string; count: number }[];
+  gap_analysis: { skill: string; have: boolean; gap_level: "strong" | "partial" | "missing"; action: string }[];
+  suggested_insights: { title: string; content: string }[];
+  research_topics: { topic: string; why: string }[];
+  generated_at: string;
+}
+
 export interface Application {
   id: string;
   user_id: string;

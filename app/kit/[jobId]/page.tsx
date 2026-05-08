@@ -5,10 +5,11 @@ import { createBrowserSupabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { KitPanel, KitSkeleton } from "@/components/KitPanel";
-import type { Job, Kit, User } from "@/lib/types";
+import type { Job, Kit, User, JobInsights } from "@/lib/types";
 
 const TABS = [
   { key: "preview", label: "Application Preview" },
+  { key: "insights", label: "Job Insights" },
   { key: "personal", label: "Personal Info" },
   { key: "cover", label: "Cover Letter" },
   { key: "cv", label: "Tailored CV" },
@@ -26,10 +27,13 @@ export default function KitPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [kit, setKit] = useState<Kit | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [insights, setInsights] = useState<JobInsights | null>(null);
   const [tab, setTab] = useState<TabKey>("preview");
   const [generating, setGenerating] = useState(false);
+  const [generatingInsights, setGeneratingInsights] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [insightsError, setInsightsError] = useState("");
 
   const supabase = createBrowserSupabase();
 
@@ -40,15 +44,17 @@ export default function KitPage() {
       const userId = sessionData.session?.user.id;
       if (!userId) { router.push("/auth"); return; }
 
-      const [userRes, jobRes, kitRes] = await Promise.all([
+      const [userRes, jobRes, kitRes, insightsRes] = await Promise.all([
         supabase.from("users").select("*").eq("id", userId).single(),
         supabase.from("jobs").select("*").eq("id", jobId).eq("user_id", userId).single(),
         supabase.from("kits").select("*").eq("job_id", jobId).eq("user_id", userId).single(),
+        supabase.from("job_insights").select("*").eq("job_id", jobId).eq("user_id", userId).single(),
       ]);
 
       if (userRes.data) setUser(userRes.data as User);
       if (jobRes.data) setJob(jobRes.data as Job);
       if (kitRes.data) setKit(kitRes.data as Kit);
+      if (insightsRes.data) setInsights(insightsRes.data as JobInsights);
     } finally {
       setLoading(false);
     }
@@ -78,6 +84,26 @@ export default function KitPage() {
       setError(e.message ?? "Generation failed");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateInsights = async () => {
+    setGeneratingInsights(true);
+    setInsightsError("");
+    try {
+      const res = await fetch("/api/jobs/insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json() as { insights?: JobInsights; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to generate insights");
+      if (data.insights) setInsights(data.insights);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setInsightsError(e.message ?? "Failed to generate insights");
+    } finally {
+      setGeneratingInsights(false);
     }
   };
 
@@ -131,7 +157,7 @@ export default function KitPage() {
         {/* Tabs */}
         <div className="flex border-b border-border mb-6 overflow-x-auto">
           {TABS.map((t) => {
-            const locked = t.key !== "preview" && !isPaid;
+            const locked = t.key !== "preview" && t.key !== "insights" && !isPaid;
             return (
               <button
                 key={t.key}
@@ -232,6 +258,154 @@ export default function KitPage() {
                 Apply →
               </a>
             </div>
+          </div>
+        )}
+
+        {tab === "insights" && (
+          <div className="space-y-6">
+            {!insights && !generatingInsights && (
+              <div className="border border-border rounded-[8px] p-8 text-center bg-surface">
+                <p className="font-syne font-bold text-lg text-text-primary mb-2">Generate job insights</p>
+                <p className="text-text-dimmed text-sm font-dm-sans mb-4">
+                  Claude will extract key skills, identify gaps, and give you ready-to-use talking points.
+                </p>
+                {insightsError && <p className="text-xs text-red-500 font-dm-sans mb-3">{insightsError}</p>}
+                <button
+                  onClick={generateInsights}
+                  className="px-6 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
+                >
+                  Generate insights
+                </button>
+              </div>
+            )}
+
+            {generatingInsights && (
+              <div className="space-y-4 animate-pulse">
+                {[1,2,3,4].map((i) => (
+                  <div key={i} className="border border-border rounded-[8px] p-5 bg-surface">
+                    <div className="h-4 bg-surface-secondary rounded w-1/3 mb-3" />
+                    <div className="h-3 bg-surface-secondary rounded w-2/3" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {insights && (
+              <>
+                {/* Company mission */}
+                {insights.company_mission && (
+                  <KitPanel title="Company mission">
+                    <p className="text-sm text-text-primary font-dm-sans leading-relaxed">{insights.company_mission}</p>
+                  </KitPanel>
+                )}
+
+                {/* Key skills */}
+                {insights.key_skills?.length > 0 && (
+                  <KitPanel title="Key skills required">
+                    <div className="space-y-3">
+                      {insights.key_skills.map((s, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full border font-dm-sans mt-0.5 ${
+                            s.required
+                              ? "bg-text-primary text-background border-text-primary"
+                              : "border-border text-text-dimmed"
+                          }`}>
+                            {s.required ? "Required" : "Nice to have"}
+                          </span>
+                          <div>
+                            <p className="text-sm font-dm-sans font-medium text-text-primary">{s.skill}</p>
+                            <p className="text-xs text-text-dimmed font-dm-sans">{s.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </KitPanel>
+                )}
+
+                {/* Gap analysis */}
+                {insights.gap_analysis?.length > 0 && (
+                  <KitPanel title="Gap analysis">
+                    <div className="space-y-2">
+                      {insights.gap_analysis.map((g, i) => (
+                        <div key={i} className="border border-border rounded-[8px] p-3 bg-background">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-dm-sans font-medium text-text-primary">{g.skill}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border font-dm-sans ${
+                              g.gap_level === "strong"
+                                ? "border-green-500 text-green-700 bg-green-50"
+                                : g.gap_level === "partial"
+                                ? "border-yellow-500 text-yellow-700 bg-yellow-50"
+                                : "border-red-400 text-red-700 bg-red-50"
+                            }`}>
+                              {g.gap_level === "strong" ? "You have it" : g.gap_level === "partial" ? "Partial" : "Gap"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-text-dimmed font-dm-sans">{g.action}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </KitPanel>
+                )}
+
+                {/* Suggested insights / talking points */}
+                {insights.suggested_insights?.length > 0 && (
+                  <KitPanel title="Talking points for cover letter">
+                    <div className="space-y-3">
+                      {insights.suggested_insights.map((s, i) => (
+                        <div key={i} className="border border-border rounded-[8px] p-3 bg-background">
+                          <p className="text-xs font-dm-sans font-medium text-text-dimmed mb-1">{s.title}</p>
+                          <p className="text-sm font-dm-sans text-text-primary leading-relaxed">{s.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </KitPanel>
+                )}
+
+                {/* Word cloud */}
+                {insights.word_cloud?.length > 0 && (
+                  <KitPanel title="Key terms from job description">
+                    <div className="flex flex-wrap gap-2">
+                      {insights.word_cloud
+                        .sort((a, b) => b.count - a.count)
+                        .map((w, i) => (
+                          <span
+                            key={i}
+                            className="px-3 py-1 border border-border rounded-full font-dm-sans text-text-primary bg-background"
+                            style={{ fontSize: `${Math.max(11, Math.min(18, 11 + w.count))}px` }}
+                          >
+                            {w.word}
+                          </span>
+                        ))}
+                    </div>
+                  </KitPanel>
+                )}
+
+                {/* Research topics */}
+                {insights.research_topics?.length > 0 && (
+                  <KitPanel title="Research before applying">
+                    <div className="space-y-3">
+                      {insights.research_topics.map((r, i) => (
+                        <div key={i} className="flex gap-3">
+                          <span className="font-syne font-bold text-text-dimmed shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                          <div>
+                            <p className="text-sm font-dm-sans font-medium text-text-primary">{r.topic}</p>
+                            <p className="text-xs text-text-dimmed font-dm-sans">{r.why}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </KitPanel>
+                )}
+
+                <button
+                  onClick={generateInsights}
+                  disabled={generatingInsights}
+                  className="text-xs text-text-dimmed font-dm-sans hover:text-text-primary transition-all duration-[150ms]"
+                >
+                  Regenerate insights
+                </button>
+              </>
+            )}
           </div>
         )}
 
