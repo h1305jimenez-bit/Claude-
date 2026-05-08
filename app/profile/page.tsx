@@ -98,10 +98,16 @@ export default function ProfilePage() {
         headers: { "x-access-token": accessToken, "Content-Type": "application/pdf" },
         body: cvFile,
       });
-      const data = await res.json() as { path?: string; error?: string };
+      const data = await res.json() as { path?: string; prefsExtracted?: boolean; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      setMessage("CV updated. Job scores will refresh on next fetch.");
       setCvFile(null);
+      await loadUser();
+      if (data.prefsExtracted) {
+        setTab("Preferences");
+        setMessage("CV uploaded. Preferences auto-filled from your CV — review and save.");
+      } else {
+        setMessage("CV uploaded.");
+      }
     } catch (err: unknown) {
       const e = err as { message?: string };
       setMessage(e.message ?? "Upload failed");

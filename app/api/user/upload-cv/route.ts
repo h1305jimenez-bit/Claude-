@@ -1,7 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
+import { anthropic } from "@/lib/anthropic";
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+type ExtractedPrefs = {
+  name: string; phone: string; linkedin: string; education: string;
+  target_role: string; seniority: string; salary_expectation: string; work_authorization: string;
+};
+
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  try {
+    // Use the internal path to bypass pdf-parse's test file loading (which crashes on Vercel)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require("pdf-parse/lib/pdf-parse.js") as (b: Buffer) => Promise<{ text: string }>;
+    const result = await pdfParse(buffer);
+    return result.text.slice(0, 8000);
+  } catch {
+    return "";
+  }
+}
+
+async function extractPrefsFromCv(cvText: string): Promise<ExtractedPrefs | null> {
+  if (!cvText) return null;
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      messages: [{
+        role: "user",
+        content: `Extract information from this CV. Return ONLY a valid JSON object with these exact keys (use empty string if not found):
+name, phone, linkedin, education (degree + institution), target_role (most recent job title or role they are applying for), seniority (one of: Intern/Junior/Mid-level/Senior/Lead/Manager/Director/Executive), salary_expectation, work_authorization.
+
+CV:
+${cvText.substring(0, 4000)}`,
+      }],
+    });
+    const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    return JSON.parse(jsonMatch[0]) as ExtractedPrefs;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(req: NextRequest) {
   let step = "init";
@@ -19,50 +61,56 @@ export async function POST(req: NextRequest) {
     const userId = payload.sub;
     if (!userId) return NextResponse.json({ error: "No user ID in token" }, { status: 401 });
 
-    step = "check-config";
     if (!SUPABASE_URL.startsWith("http")) {
-      return NextResponse.json({ error: `SUPABASE_URL not configured: ${SUPABASE_URL.substring(0, 20)}` }, { status: 500 });
+      return NextResponse.json({ error: "SUPABASE_URL not configured" }, { status: 500 });
     }
 
     step = "read-buffer";
     const arrayBuffer = await req.arrayBuffer();
-    const byteLength = arrayBuffer.byteLength;
-    if (!byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-
+    if (!arrayBuffer.byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     const buffer = Buffer.from(arrayBuffer);
 
-    const authHeaders = {
-      "Authorization": `Bearer ${accessToken}`,
-      "apikey": ANON_KEY,
-    };
+    step = "parse-pdf";
+    const cvText = await extractPdfText(buffer);
+
+    step = "extract-prefs";
+    const prefs = await extractPrefsFromCv(cvText);
+
+    const authHeaders = { "Authorization": `Bearer ${accessToken}`, "apikey": ANON_KEY };
 
     step = "storage-upload";
-    const storageUrl = `${SUPABASE_URL}/storage/v1/object/cvs/${userId}/cv.pdf`;
-    const storageRes = await fetch(storageUrl, {
-      method: "POST",
-      headers: { ...authHeaders, "Content-Type": "application/pdf", "x-upsert": "true" },
-      body: buffer,
-    });
+    const storageRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/cvs/${userId}/cv.pdf`,
+      { method: "POST", headers: { ...authHeaders, "Content-Type": "application/pdf", "x-upsert": "true" }, body: buffer }
+    );
     if (!storageRes.ok) {
       const errText = await storageRes.text();
       throw new Error(`Storage error (${storageRes.status}): ${errText}`);
     }
 
     step = "db-update";
+    const updatePayload: Record<string, string> = { cv_url: `${userId}/cv.pdf`, cv_text: cvText };
+    if (prefs) {
+      if (prefs.name) updatePayload.name = prefs.name;
+      if (prefs.phone) updatePayload.phone = prefs.phone;
+      if (prefs.linkedin) updatePayload.linkedin = prefs.linkedin;
+      if (prefs.education) updatePayload.education = prefs.education;
+      if (prefs.target_role) updatePayload.target_role = prefs.target_role;
+      if (prefs.seniority) updatePayload.seniority = prefs.seniority;
+      if (prefs.salary_expectation) updatePayload.salary_expectation = prefs.salary_expectation;
+      if (prefs.work_authorization) updatePayload.work_authorization = prefs.work_authorization;
+    }
+
     const updateRes = await fetch(
       `${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
-      {
-        method: "PATCH",
-        headers: { ...authHeaders, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ cv_url: `${userId}/cv.pdf`, cv_text: "" }),
-      }
+      { method: "PATCH", headers: { ...authHeaders, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify(updatePayload) }
     );
     if (!updateRes.ok) {
       const errText = await updateRes.text();
       throw new Error(`DB error (${updateRes.status}): ${errText}`);
     }
 
-    return NextResponse.json({ path: `${userId}/cv.pdf`, bytes: byteLength });
+    return NextResponse.json({ path: `${userId}/cv.pdf`, prefsExtracted: !!prefs, prefs: prefs ?? {} });
   } catch (err) {
     const msg = (err as { message?: string }).message ?? String(err);
     console.error(`upload-cv [${step}]:`, msg);

@@ -43,15 +43,32 @@ export default function OnboardingPage() {
     setUploading(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.append("cv", cvFile);
       const res = await fetch("/api/user/upload-cv", {
         method: "POST",
-        headers: { "x-access-token": accessToken },
-        body: formData,
+        headers: { "x-access-token": accessToken, "Content-Type": "application/pdf" },
+        body: cvFile,
       });
-      const data = await res.json() as { path?: string; error?: string };
+      const data = await res.json() as {
+        path?: string;
+        prefs?: { name?: string; phone?: string; linkedin?: string; education?: string;
+          target_role?: string; seniority?: string; salary_expectation?: string; work_authorization?: string };
+        prefsExtracted?: boolean;
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      if (data.prefsExtracted && data.prefs) {
+        setForm((f) => ({
+          ...f,
+          ...(data.prefs!.name && { name: data.prefs!.name }),
+          ...(data.prefs!.phone && { phone: data.prefs!.phone }),
+          ...(data.prefs!.linkedin && { linkedin: data.prefs!.linkedin }),
+          ...(data.prefs!.education && { education: data.prefs!.education }),
+          ...(data.prefs!.target_role && { target_role: data.prefs!.target_role }),
+          ...(data.prefs!.seniority && { seniority: data.prefs!.seniority }),
+          ...(data.prefs!.salary_expectation && { salary_expectation: data.prefs!.salary_expectation }),
+          ...(data.prefs!.work_authorization && { work_authorization: data.prefs!.work_authorization }),
+        }));
+      }
       setCvUploaded(true);
       setStep(2);
     } catch (err: unknown) {
