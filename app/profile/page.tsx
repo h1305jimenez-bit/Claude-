@@ -95,21 +95,27 @@ export default function ProfilePage() {
     setMessage("");
     let step = "form";
     try {
-      const formData = new FormData();
-      formData.append("cv", cvFile);
       step = "fetch";
       const res = await fetch("/api/user/upload-cv", {
         method: "POST",
-        headers: { "x-access-token": accessToken },
-        body: formData,
+        headers: {
+          "x-access-token": accessToken,
+          "x-filename": encodeURIComponent(cvFile.name),
+          "Content-Type": "application/pdf",
+        },
+        body: cvFile,
       });
-      step = "json";
-      const rawText = await res.text();
+      step = `status:${res.status}`;
+      let rawText = "";
+      try { rawText = await res.text(); } catch (e2) {
+        throw new Error(`text() threw: ${(e2 as {message?:string}).message}`);
+      }
+      step = `parse:${res.status}`;
       let data: { path?: string; error?: string };
       try {
         data = JSON.parse(rawText) as { path?: string; error?: string };
       } catch {
-        throw new Error(`HTTP ${res.status}: ${rawText.substring(0, 120)}`);
+        throw new Error(`not-json(${res.status}): ${rawText.substring(0, 100)}`);
       }
       step = "check";
       if (!res.ok) throw new Error(data.error ?? "Upload failed");

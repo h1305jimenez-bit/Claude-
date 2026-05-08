@@ -26,13 +26,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "SUPABASE_URL not configured" }, { status: 500 });
     }
 
-    step = "read-form";
-    const formData = await req.formData();
-    const file = formData.get("cv") as File | null;
-    if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-
     step = "read-buffer";
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = await req.arrayBuffer();
+    if (!arrayBuffer.byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     const buffer = Buffer.from(arrayBuffer);
 
     step = "parse-pdf";
