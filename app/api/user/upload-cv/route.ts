@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string; numpages: number }>;
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -31,15 +29,6 @@ export async function POST(req: NextRequest) {
     if (!arrayBuffer.byteLength) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     const buffer = Buffer.from(arrayBuffer);
 
-    step = "parse-pdf";
-    let text = "";
-    try {
-      const parsed = await pdfParse(buffer);
-      text = parsed.text.slice(0, 8000);
-    } catch (parseErr) {
-      console.warn("PDF parse warning (continuing):", parseErr);
-    }
-
     const authHeaders = {
       "Authorization": `Bearer ${accessToken}`,
       "apikey": ANON_KEY,
@@ -65,7 +54,7 @@ export async function POST(req: NextRequest) {
       {
         method: "PATCH",
         headers: { ...authHeaders, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ cv_url: `${userId}/cv.pdf`, cv_text: text }),
+        body: JSON.stringify({ cv_url: `${userId}/cv.pdf`, cv_text: "" }),
       }
     );
     if (!updateRes.ok) {
