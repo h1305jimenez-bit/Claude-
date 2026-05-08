@@ -98,13 +98,28 @@ export default function ProfilePage() {
         headers: { "x-access-token": accessToken, "Content-Type": "application/pdf" },
         body: cvFile,
       });
-      const data = await res.json() as { path?: string; prefsExtracted?: boolean; error?: string };
+      const data = await res.json() as {
+        path?: string; prefsExtracted?: boolean; error?: string;
+        prefs?: { name?: string; phone?: string; linkedin?: string; education?: string;
+          target_role?: string; seniority?: string; salary_expectation?: string; work_authorization?: string };
+      };
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setCvFile(null);
-      await loadUser();
-      if (data.prefsExtracted) {
+      if (data.prefsExtracted && data.prefs) {
+        const p = data.prefs;
+        setPreferences((prev) => ({
+          ...prev,
+          ...(p.name && { name: p.name }),
+          ...(p.phone && { phone: p.phone }),
+          ...(p.linkedin && { linkedin: p.linkedin }),
+          ...(p.education && { education: p.education }),
+          ...(p.target_role && { target_role: p.target_role }),
+          ...(p.seniority && { seniority: p.seniority }),
+          ...(p.salary_expectation && { salary_expectation: p.salary_expectation }),
+          ...(p.work_authorization && { work_authorization: p.work_authorization }),
+        }));
         setTab("Preferences");
-        setMessage("CV uploaded. Preferences auto-filled from your CV — review and save.");
+        setMessage("CV uploaded. Preferences auto-filled — review and save.");
       } else {
         setMessage("CV uploaded.");
       }
