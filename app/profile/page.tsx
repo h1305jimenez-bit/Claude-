@@ -89,24 +89,29 @@ export default function ProfilePage() {
   };
 
   const handleCvUpload = async () => {
-    if (!cvFile || !accessToken) return;
+    if (!cvFile) { setMessage("debug: no file"); return; }
+    if (!accessToken) { setMessage("debug: no token"); return; }
     setUploadingCv(true);
     setMessage("");
+    let step = "form";
     try {
       const formData = new FormData();
       formData.append("cv", cvFile);
+      step = "fetch";
       const res = await fetch("/api/user/upload-cv", {
         method: "POST",
         headers: { "x-access-token": accessToken },
         body: formData,
       });
+      step = "json";
       const data = await res.json() as { path?: string; error?: string };
+      step = "check";
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setMessage("CV updated. Job scores will refresh on next fetch.");
       setCvFile(null);
     } catch (err: unknown) {
       const e = err as { message?: string };
-      setMessage(e.message ?? "Upload failed");
+      setMessage(`[${step}] ${e.message ?? "Upload failed"}`);
     } finally {
       setUploadingCv(false);
     }
