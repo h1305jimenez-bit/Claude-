@@ -214,7 +214,7 @@ export default function ProfilePage() {
                 disabled={!cvFile || uploadingCv}
                 className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
               >
-                {uploadingCv ? "Uploading..." : "Upload CV"}
+                {uploadingCv ? "Uploading..." : "Upload CV [v8]"}
               </button>
             </div>
           </div>
