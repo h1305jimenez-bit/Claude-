@@ -39,9 +39,9 @@ export function JobRow({ job }: JobRowProps) {
             }`}>
               {statusLabel[job.status] ?? job.status}
             </span>
-            <span className={`inline-flex items-baseline gap-0.5 ${scoreColor(job.score)}`}>
-              <span className="text-sm font-syne font-bold">{job.score}</span>
-              <span className="text-xs font-dm-sans text-text-dimmed">/ 100 match</span>
+            <span className="text-sm font-syne font-bold text-text-primary">
+              {job.score}
+              <span className="text-xs font-dm-sans font-normal text-text-dimmed"> / 100 match</span>
             </span>
           </div>
           <h3 className="font-dm-sans font-medium text-text-primary text-sm truncate">{job.role}</h3>
