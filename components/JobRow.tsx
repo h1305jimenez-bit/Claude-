@@ -41,7 +41,7 @@ export function JobRow({ job }: JobRowProps) {
             </span>
             <span className="text-sm font-syne font-bold text-text-primary">
               {job.score}
-              <span className="text-xs font-dm-sans font-normal text-text-dimmed"> / 100 match</span>
+              <span style={{ fontSize: 11, color: "#6b6b6b", fontWeight: 400, marginLeft: 3 }}> / 100 match</span>
             </span>
           </div>
           <h3 className="font-dm-sans font-medium text-text-primary text-sm truncate">{job.role}</h3>

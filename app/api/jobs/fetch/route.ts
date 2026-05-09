@@ -8,6 +8,7 @@ export const maxDuration = 60;
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? "";
 
 export async function POST(req: NextRequest) {
   try {
@@ -162,12 +163,12 @@ JSON format:
 
     const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
 
-    // Always delete stale 'new' jobs on refresh so old location/role results never linger
+    // Always delete stale 'new' jobs — use service key so RLS doesn't block the delete
     await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
       method: "DELETE",
       headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "apikey": ANON_KEY,
+        "Authorization": `Bearer ${SERVICE_KEY}`,
+        "apikey": SERVICE_KEY,
         "Prefer": "return=minimal",
       },
     });
