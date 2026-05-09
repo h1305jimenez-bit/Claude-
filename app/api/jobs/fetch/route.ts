@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const userId = session.user.id;
-    const { data: user } = await supabaseAdmin.from("users").select("*").eq("id", userId).single();
+    const { data: user } = await supabase.from("users").select("*").eq("id", userId).single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     // Check refresh limit
