@@ -92,14 +92,21 @@ export default function DashboardPage() {
         method: "POST",
         headers: { "x-access-token": accessToken },
       });
-      const data = await res.json() as { action?: string; patchStatus?: number; error?: string };
-      if (!res.ok || data.error) {
-        setError(`Fix failed: ${data.error ?? res.status}`);
+      const data = await res.json() as { action?: string; error?: string; steps?: string[] };
+      const stepsSummary = data.steps ? `\n${data.steps.join("\n")}` : "";
+      if (data.error) {
+        setDebugInfo(stepsSummary);
+        setError(`Fix failed: ${data.error}`);
       } else if (data.action === "already_correct") {
-        setError("ID already correct — refreshing jobs now...");
+        setDebugInfo(stepsSummary);
+        setError("IDs already match — refreshing jobs...");
         await triggerRefresh(false);
+      } else if (data.action === "failed") {
+        setDebugInfo(stepsSummary);
+        setError("Fix attempts failed — see debug info below");
       } else {
-        setError(`Fixed (${data.action})! Loading jobs...`);
+        setDebugInfo(null);
+        setError(`Fixed! (${data.action}) Reloading...`);
         await loadData();
       }
     } catch (e) {
