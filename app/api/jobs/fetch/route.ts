@@ -51,12 +51,24 @@ export async function POST(req: NextRequest) {
     const seenIds = new Set<string>();
     let adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
 
+    // Simplify a role title to its last 2 meaningful words (fallback for niche titles)
+    function simplifyRole(role: string): string | null {
+      const words = role.replace(/[&,]/g, " ").split(/\s+/).filter(w => w.length > 2);
+      if (words.length <= 2) return null;
+      return words.slice(-2).join(" ");
+    }
+
     // Fetch for each role+location combination and combine
     for (const role of roles) {
       for (const loc of locations) {
         if (adzunaJobs.length >= 16) break;
         try {
-          const results = await fetchAdzunaJobs(role, loc);
+          let results = await fetchAdzunaJobs(role, loc);
+          // Fallback: if niche title returns nothing, retry with simplified role
+          if (results.length === 0) {
+            const simplified = simplifyRole(role);
+            if (simplified) results = await fetchAdzunaJobs(simplified, loc);
+          }
           for (const job of results) {
             if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
             if (adzunaJobs.length >= 16) break;
