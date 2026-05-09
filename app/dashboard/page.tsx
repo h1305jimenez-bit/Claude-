@@ -84,6 +84,29 @@ export default function DashboardPage() {
     }
   };
 
+  const fixUserId = async () => {
+    if (!accessToken) return;
+    setError("");
+    try {
+      const res = await fetch("/api/fix/user-id", {
+        method: "POST",
+        headers: { "x-access-token": accessToken },
+      });
+      const data = await res.json() as { action?: string; patchStatus?: number; error?: string };
+      if (!res.ok || data.error) {
+        setError(`Fix failed: ${data.error ?? res.status}`);
+      } else if (data.action === "already_correct") {
+        setError("ID already correct — refreshing jobs now...");
+        await triggerRefresh(false);
+      } else {
+        setError(`Fixed (${data.action})! Loading jobs...`);
+        await loadData();
+      }
+    } catch (e) {
+      setError(`Fix error: ${String(e)}`);
+    }
+  };
+
   const triggerRefresh = async (manual = true) => {
     if (manual && remaining <= 0) {
       setError("Daily refresh limit reached. Try again tomorrow.");
@@ -168,7 +191,12 @@ export default function DashboardPage() {
           {error && (
             <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans">
               {error}
-              <button onClick={runDebug} className="ml-3 underline text-xs">diagnose</button>
+              {error.includes("User not found") && (
+                <button onClick={fixUserId} className="ml-3 px-2 py-0.5 border border-border rounded text-xs text-text-primary hover:bg-surface-secondary transition-all">
+                  Fix account →
+                </button>
+              )}
+              <button onClick={runDebug} className="ml-2 underline text-xs">diagnose</button>
             </div>
           )}
 
