@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [showAddJob, setShowAddJob] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   const supabase = createBrowserSupabase();
 
@@ -71,6 +72,17 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }, [supabase]);
+
+  const runDebug = async () => {
+    if (!accessToken) { setDebugInfo("No access token yet — reload page first"); return; }
+    try {
+      const res = await fetch("/api/debug/user", { headers: { "x-access-token": accessToken } });
+      const data = await res.json() as unknown;
+      setDebugInfo(JSON.stringify(data, null, 2));
+    } catch (e) {
+      setDebugInfo(String(e));
+    }
+  };
 
   const triggerRefresh = async (manual = true) => {
     if (manual && remaining <= 0) {
@@ -156,6 +168,17 @@ export default function DashboardPage() {
           {error && (
             <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans">
               {error}
+              <button onClick={runDebug} className="ml-3 underline text-xs">diagnose</button>
+            </div>
+          )}
+
+          {debugInfo && (
+            <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-syne font-bold text-text-primary">Debug info</p>
+                <button onClick={() => setDebugInfo(null)} className="text-xs text-text-dimmed">✕</button>
+              </div>
+              <pre className="text-xs text-text-dimmed font-mono overflow-auto max-h-64 whitespace-pre-wrap">{debugInfo}</pre>
             </div>
           )}
 
