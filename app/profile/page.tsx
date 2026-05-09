@@ -23,6 +23,8 @@ export default function ProfilePage() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [roleInput, setRoleInput] = useState("");
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [locationInput, setLocationInput] = useState("");
   const [preferences, setPreferences] = useState({
     name: "",
     phone: "",
@@ -52,6 +54,8 @@ export default function ProfilePage() {
         setUser(u);
         const roles = u.target_role ? u.target_role.split(",").map((r: string) => r.trim()).filter(Boolean) : [];
         setSelectedRoles(roles);
+        const locs = u.target_location ? u.target_location.split(",").map((l: string) => l.trim()).filter(Boolean) : [];
+        setSelectedLocations(locs);
         setPreferences({
           name: u.name || "",
           phone: u.phone || "",
@@ -93,14 +97,19 @@ export default function ProfilePage() {
   }, []);
 
   const handleSavePreferences = async () => {
+    if (!accessToken) return;
     setSaving(true);
     setMessage("");
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-      if (!userId) return;
-      await supabase.from("users").update(preferences).eq("id", userId);
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "x-access-token": accessToken, "Content-Type": "application/json" },
+        body: JSON.stringify(preferences),
+      });
+      if (!res.ok) throw new Error("Save failed");
       setMessage("Saved.");
+    } catch {
+      setMessage("Save failed — please try again.");
     } finally {
       setSaving(false);
     }
@@ -390,8 +399,75 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Target locations — multi-select */}
+            <div>
+              <label className="block text-xs text-text-dimmed font-dm-sans mb-2">Target locations</label>
+
+              {selectedLocations.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedLocations.map((loc) => (
+                    <span key={loc} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
+                      {loc}
+                      <button onClick={() => {
+                        const updated = selectedLocations.filter(l => l !== loc);
+                        setSelectedLocations(updated);
+                        setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                      }} className="opacity-60 hover:opacity-100">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 mb-2">
+                {["United States", "United Kingdom", "Canada", "Australia", "Germany", "Singapore", "Mexico", "France", "Netherlands", "Remote / Worldwide"].map((loc) => {
+                  const selected = selectedLocations.includes(loc);
+                  return (
+                    <button key={loc} onClick={() => {
+                      const updated = selected ? selectedLocations.filter(l => l !== loc) : [...selectedLocations, loc];
+                      setSelectedLocations(updated);
+                      setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                    }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
+                      {selected ? "✓ " : ""}{loc}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Add a city or country..."
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && locationInput.trim()) {
+                      const val = locationInput.trim();
+                      if (!selectedLocations.includes(val)) {
+                        const updated = [...selectedLocations, val];
+                        setSelectedLocations(updated);
+                        setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                      }
+                      setLocationInput("");
+                      e.preventDefault();
+                    }
+                  }}
+                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
+                <button onClick={() => {
+                  const val = locationInput.trim();
+                  if (val && !selectedLocations.includes(val)) {
+                    const updated = [...selectedLocations, val];
+                    setSelectedLocations(updated);
+                    setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                  }
+                  setLocationInput("");
+                }} disabled={!locationInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
+                  Add
+                </button>
+              </div>
+            </div>
+
             {[
-              { key: "target_location", label: "Target location", type: "text" },
               { key: "seniority", label: "Seniority", type: "text" },
               { key: "salary_expectation", label: "Salary expectation", type: "text" },
               { key: "work_authorization", label: "Work authorization", type: "text" },
@@ -401,9 +477,7 @@ export default function ProfilePage() {
                 <input
                   type={field.type}
                   value={preferences[field.key as keyof typeof preferences]}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, [field.key]: e.target.value }))
-                  }
+                  onChange={(e) => setPreferences((p) => ({ ...p, [field.key]: e.target.value }))}
                   className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
                 />
               </div>

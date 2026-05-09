@@ -41,25 +41,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Set a target role in your profile first." }, { status: 400 });
     }
 
-    // Support multiple comma-separated roles
+    // Support multiple comma-separated roles and locations
     const roles = user.target_role.split(",").map((r: string) => r.trim()).filter(Boolean);
+    const locations = user.target_location
+      ? user.target_location.split(",").map((l: string) => l.trim()).filter(Boolean)
+      : [""];
     let adzunaError = "";
     let searchQuery = roles[0] || user.target_role;
     const seenIds = new Set<string>();
     let adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
 
-    // Fetch for each role and combine (up to 8 total)
+    // Fetch for each role+location combination and combine
     for (const role of roles) {
-      if (adzunaJobs.length >= 8) break;
-      try {
-        const results = await fetchAdzunaJobs(role, user.target_location || "");
-        for (const job of results) {
-          if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
-          if (adzunaJobs.length >= 16) break;
+      for (const loc of locations) {
+        if (adzunaJobs.length >= 16) break;
+        try {
+          const results = await fetchAdzunaJobs(role, loc);
+          for (const job of results) {
+            if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
+            if (adzunaJobs.length >= 16) break;
+          }
+          searchQuery = `${role}${loc ? ` in ${loc}` : ""}`;
+        } catch (e) {
+          adzunaError = (e as { message?: string }).message ?? String(e);
         }
-        searchQuery = role;
-      } catch (e) {
-        adzunaError = (e as { message?: string }).message ?? String(e);
       }
     }
 
