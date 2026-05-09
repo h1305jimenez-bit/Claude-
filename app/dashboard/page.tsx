@@ -140,7 +140,7 @@ export default function DashboardPage() {
         method: "POST",
         headers: token ? { "x-access-token": token } : {},
       });
-      let data: { count?: number; remaining?: number; error?: string } = {};
+      let data: { count?: number; remaining?: number; error?: string; debug?: Record<string, unknown> } = {};
       try { data = await res.json(); } catch { /* non-JSON response */ }
       if (!res.ok) {
         if (data.error === "daily_limit_reached") {
@@ -152,7 +152,10 @@ export default function DashboardPage() {
         return;
       }
       if (data.remaining !== undefined) setRemaining(data.remaining);
-      if ((data.count ?? 0) === 0) setError("No new jobs found. Try again later or update your target role in Profile.");
+      if ((data.count ?? 0) === 0) {
+        setError("No new jobs found. Try again later or update your target role in Profile.");
+        if (data.debug) setDebugInfo(JSON.stringify(data.debug, null, 2));
+      }
 
       // Reload jobs
       const { data: sessionData } = await supabase.auth.getSession();

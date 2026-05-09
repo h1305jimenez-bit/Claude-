@@ -42,27 +42,29 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch jobs from Adzuna — try progressively simpler queries if needed
-    let adzunaJobs = await fetchAdzunaJobs(user.target_role, user.target_location || "");
+    let searchQuery = user.target_role;
+    let adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
 
     if (adzunaJobs.length === 0) {
-      // Strip filler phrases and try again with a shorter query
       const simplified = user.target_role
         .replace(/[\s-]+(focused|roles?|positions?|opportunities?|specialist).*$/i, "")
         .split(/\s+(?:and|or|\/)\s+/)[0]
         .trim();
       if (simplified && simplified !== user.target_role) {
-        adzunaJobs = await fetchAdzunaJobs(simplified, user.target_location || "");
+        searchQuery = simplified;
+        adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
       }
     }
 
     if (adzunaJobs.length === 0) {
-      // Last resort: use just the first two words
       const twoWords = user.target_role.trim().split(/\s+/).slice(0, 2).join(" ");
-      if (twoWords && twoWords !== user.target_role) {
-        adzunaJobs = await fetchAdzunaJobs(twoWords, user.target_location || "");
+      if (twoWords && twoWords !== searchQuery) {
+        searchQuery = twoWords;
+        adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
       }
     }
 
+    const adzunaCount = adzunaJobs.length;
     const jobsToScore = adzunaJobs.slice(0, 8);
 
     const candidateContext = `Role: ${user.target_role}
@@ -130,9 +132,13 @@ JSON format:
       .filter((r): r is PromiseFulfilledResult<typeof results[0] extends PromiseFulfilledResult<infer T> ? T : never> => r.status === "fulfilled")
       .map((r) => r.value);
 
+    const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
+
     // Upsert jobs via raw REST (bypasses SDK key issues)
+    let upsertStatus = 0;
+    let upsertBody = "";
     if (scoredJobs.length > 0) {
-      await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
+      const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -142,6 +148,8 @@ JSON format:
         },
         body: JSON.stringify(scoredJobs),
       });
+      upsertStatus = upsertRes.status;
+      if (!upsertRes.ok) upsertBody = await upsertRes.text();
     }
 
     // Update refresh counter via raw REST
@@ -168,6 +176,7 @@ JSON format:
       success: true,
       count: scoredJobs.length,
       remaining: remaining - 1,
+      debug: { searchQuery, adzunaCount, scored: scoredJobs.length, scoringErrors, upsertStatus, upsertBody },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
