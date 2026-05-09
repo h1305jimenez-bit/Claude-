@@ -33,32 +33,32 @@ export default function DashboardPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
-      if (!userId) return;
-      setAccessToken(sessionData.session?.access_token ?? null);
+      const token = sessionData.session?.access_token ?? null;
+      if (!userId || !token) return;
+      setAccessToken(token);
 
+      // Use raw fetch so SDK key issues don't affect user lookup
       const [userRes, jobsRes] = await Promise.all([
-        supabase.from("users").select("*").eq("id", userId).single(),
+        fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*&limit=1`, {
+          headers: { "Authorization": `Bearer ${token}`, "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
+        }).then(r => r.json()) as Promise<User[]>,
         supabase.from("jobs").select("*").eq("user_id", userId).order("score", { ascending: false }),
       ]);
 
-      if (userRes.data) {
-        const u = userRes.data as User;
+      const userData = userRes as User[];
+      if (userData[0]) {
+        const u = userData[0];
         setUser(u);
-        // Compute remaining refreshes
         const today = new Date().toDateString();
         const resetDate = u.daily_refreshes_reset_at
           ? new Date(u.daily_refreshes_reset_at).toDateString()
           : null;
-        if (today !== resetDate) {
-          setRemaining(5);
-        } else {
-          setRemaining(Math.max(0, 5 - (u.daily_refreshes_used ?? 0)));
-        }
+        setRemaining(today !== resetDate ? 5 : Math.max(0, 5 - (u.daily_refreshes_used ?? 0)));
       }
 
       if (jobsRes.data) setJobs(jobsRes.data as Job[]);
 
-      // Auto-fetch if no jobs or last job is > 24h old
+      // Auto-fetch if no jobs or last job is > 24h old — pass token directly to avoid stale state
       const hasJobs = jobsRes.data && jobsRes.data.length > 0;
       const lastJob = jobsRes.data?.[0];
       const isStale = lastJob
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         : true;
 
       if (!hasJobs || isStale) {
-        await triggerRefresh(false);
+        await triggerRefresh(false, token);
       }
     } finally {
       setLoading(false);
@@ -107,17 +107,18 @@ export default function DashboardPage() {
     }
   };
 
-  const triggerRefresh = async (manual = true) => {
+  const triggerRefresh = async (manual = true, tokenOverride?: string) => {
     if (manual && remaining <= 0) {
       setError("Daily refresh limit reached. Try again tomorrow.");
       return;
     }
     setRefreshing(true);
     setError("");
+    const token = tokenOverride ?? accessToken;
     try {
       const res = await fetch("/api/jobs/fetch", {
         method: "POST",
-        headers: accessToken ? { "x-access-token": accessToken } : {},
+        headers: token ? { "x-access-token": token } : {},
       });
       let data: { count?: number; remaining?: number; error?: string } = {};
       try { data = await res.json(); } catch { /* non-JSON response */ }
@@ -191,11 +192,9 @@ export default function DashboardPage() {
           {error && (
             <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans">
               {error}
-              {error.includes("User not found") && (
-                <button onClick={fixUserId} className="ml-3 px-2 py-0.5 border border-border rounded text-xs text-text-primary hover:bg-surface-secondary transition-all">
-                  Fix account →
-                </button>
-              )}
+              <button onClick={fixUserId} className="ml-3 px-2 py-0.5 border border-border rounded text-xs text-text-primary hover:bg-surface-secondary transition-all">
+                Fix account →
+              </button>
               <button onClick={runDebug} className="ml-2 underline text-xs">diagnose</button>
             </div>
           )}
