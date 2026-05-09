@@ -1,35 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { supabaseAdmin, createApiClient } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { anthropic } from "@/lib/anthropic";
-import { fetchAdzunaJobs, AdzunaJob } from "@/lib/adzuna";
+import { fetchAdzunaJobs } from "@/lib/adzuna";
 import { checkRefreshLimit } from "@/lib/gating";
 import type { User } from "@/lib/types";
 
 export const maxDuration = 60;
 
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const supabase = createApiClient(
-      () => cookieStore.getAll(),
-      (cookiesToSet) => {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
-          );
-        } catch {}
-      }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Auth: read token from cookie manually (avoids createServerClient atob issue)
+    const rawCookie = req.headers.get("cookie") ?? "";
+    const tokenMatch = rawCookie.match(/sb-[^-]+-auth-token=([^;]+)/);
+    let accessToken: string | null = null;
+    if (tokenMatch) {
+      try {
+        const decoded = decodeURIComponent(tokenMatch[1]);
+        const parsed = JSON.parse(decoded) as { access_token?: string };
+        accessToken = parsed.access_token ?? null;
+      } catch { /* fall through */ }
+    }
 
-    const userId = session.user.id;
-    const { data: user } = await supabase.from("users").select("*").eq("id", userId).single();
+    // Fallback: check Authorization header
+    if (!accessToken) {
+      const authHeader = req.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) accessToken = authHeader.slice(7);
+    }
+
+    if (!accessToken) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Decode JWT to get userId
+    const [, rawPayload] = accessToken.split(".");
+    if (!rawPayload) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    const padded = rawPayload + "=".repeat((4 - rawPayload.length % 4) % 4);
+    const payload = JSON.parse(Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8")) as { sub?: string };
+    const userId = payload.sub;
+    if (!userId) return NextResponse.json({ error: "No user ID" }, { status: 401 });
+
+    // Fetch user via raw REST (same pattern as upload-cv which works)
+    const userRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*&limit=1`,
+      { headers: { "Authorization": `Bearer ${accessToken}`, "apikey": ANON_KEY } }
+    );
+    const userData = await userRes.json() as User[];
+    const user = userData[0];
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     // Check refresh limit
-    const { allowed, remaining } = checkRefreshLimit(user as User);
+    const { allowed, remaining } = checkRefreshLimit(user);
     if (!allowed) {
       return NextResponse.json({ error: "daily_limit_reached", remaining: 0 }, { status: 429 });
     }
@@ -107,30 +128,39 @@ JSON format:
       .filter((r): r is PromiseFulfilledResult<typeof results[0] extends PromiseFulfilledResult<infer T> ? T : never> => r.status === "fulfilled")
       .map((r) => r.value);
 
-    // Upsert jobs (avoid duplicates by adzuna_id)
+    // Upsert jobs via raw REST (bypasses SDK key issues)
     if (scoredJobs.length > 0) {
-      await supabaseAdmin.from("jobs").upsert(scoredJobs, {
-        onConflict: "adzuna_id",
-        ignoreDuplicates: false,
+      await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates",
+        },
+        body: JSON.stringify(scoredJobs),
       });
     }
 
-    // Update refresh counter
+    // Update refresh counter via raw REST
     const today = new Date().toDateString();
     const resetDate = user.daily_refreshes_reset_at
       ? new Date(user.daily_refreshes_reset_at).toDateString()
       : null;
+    const refreshPayload = today !== resetDate
+      ? { daily_refreshes_used: 1, daily_refreshes_reset_at: new Date().toISOString() }
+      : { daily_refreshes_used: (user.daily_refreshes_used || 0) + 1 };
 
-    if (today !== resetDate) {
-      await supabaseAdmin.from("users").update({
-        daily_refreshes_used: 1,
-        daily_refreshes_reset_at: new Date().toISOString(),
-      }).eq("id", userId);
-    } else {
-      await supabaseAdmin.from("users").update({
-        daily_refreshes_used: (user.daily_refreshes_used || 0) + 1,
-      }).eq("id", userId);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "apikey": ANON_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify(refreshPayload),
+    });
 
     return NextResponse.json({
       success: true,
