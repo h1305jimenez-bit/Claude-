@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [remaining, setRemaining] = useState(5);
   const [error, setError] = useState("");
   const [showAddJob, setShowAddJob] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const supabase = createBrowserSupabase();
 
@@ -32,6 +33,7 @@ export default function DashboardPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       if (!userId) return;
+      setAccessToken(sessionData.session?.access_token ?? null);
 
       const [userRes, jobsRes] = await Promise.all([
         supabase.from("users").select("*").eq("id", userId).single(),
@@ -78,7 +80,10 @@ export default function DashboardPage() {
     setRefreshing(true);
     setError("");
     try {
-      const res = await fetch("/api/jobs/fetch", { method: "POST" });
+      const res = await fetch("/api/jobs/fetch", {
+        method: "POST",
+        headers: accessToken ? { "x-access-token": accessToken } : {},
+      });
       let data: { count?: number; remaining?: number; error?: string } = {};
       try { data = await res.json(); } catch { /* non-JSON response */ }
       if (!res.ok) {

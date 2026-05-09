@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
 import { anthropic } from "@/lib/anthropic";
 import { fetchAdzunaJobs } from "@/lib/adzuna";
 import { checkRefreshLimit } from "@/lib/gating";
@@ -12,24 +11,7 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth: read token from cookie manually (avoids createServerClient atob issue)
-    const rawCookie = req.headers.get("cookie") ?? "";
-    const tokenMatch = rawCookie.match(/sb-[^-]+-auth-token=([^;]+)/);
-    let accessToken: string | null = null;
-    if (tokenMatch) {
-      try {
-        const decoded = decodeURIComponent(tokenMatch[1]);
-        const parsed = JSON.parse(decoded) as { access_token?: string };
-        accessToken = parsed.access_token ?? null;
-      } catch { /* fall through */ }
-    }
-
-    // Fallback: check Authorization header
-    if (!accessToken) {
-      const authHeader = req.headers.get("authorization");
-      if (authHeader?.startsWith("Bearer ")) accessToken = authHeader.slice(7);
-    }
-
+    const accessToken = req.headers.get("x-access-token");
     if (!accessToken) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Decode JWT to get userId
