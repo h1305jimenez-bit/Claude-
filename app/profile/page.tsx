@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [suggestedRoles, setSuggestedRoles] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [roleInput, setRoleInput] = useState("");
   const [preferences, setPreferences] = useState({
     name: "",
     phone: "",
@@ -350,36 +351,43 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Manual input fallback */}
-              <input
-                type="text"
-                placeholder={selectedRoles.length > 0 ? "Add another role..." : "Type a role or pick from suggestions above"}
-                value={""}
-                onChange={(e) => {
-                  if (e.target.value.endsWith(",") || e.target.value.endsWith("\n")) {
-                    const newRole = e.target.value.replace(/[,\n]$/, "").trim();
-                    if (newRole && !selectedRoles.includes(newRole)) {
-                      const updated = [...selectedRoles, newRole];
-                      setSelectedRoles(updated);
-                      setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+              {/* Manual input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder={selectedRoles.length > 0 ? "Add another role..." : "Type a role..."}
+                  value={roleInput}
+                  onChange={(e) => setRoleInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && roleInput.trim()) {
+                      const val = roleInput.trim();
+                      if (!selectedRoles.includes(val)) {
+                        const updated = [...selectedRoles, val];
+                        setSelectedRoles(updated);
+                        setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                      }
+                      setRoleInput("");
+                      e.preventDefault();
                     }
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const val = (e.target as HTMLInputElement).value.trim();
+                  }}
+                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
+                <button
+                  onClick={() => {
+                    const val = roleInput.trim();
                     if (val && !selectedRoles.includes(val)) {
                       const updated = [...selectedRoles, val];
                       setSelectedRoles(updated);
                       setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
-                      (e.target as HTMLInputElement).value = "";
                     }
-                    e.preventDefault();
-                  }
-                }}
-                className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-              />
-              <p className="text-xs text-text-dimmed font-dm-sans mt-1">Select from suggestions or type + press Enter</p>
+                    setRoleInput("");
+                  }}
+                  disabled={!roleInput.trim()}
+                  className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40"
+                >
+                  Add
+                </button>
+              </div>
             </div>
 
             {[
