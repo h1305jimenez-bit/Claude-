@@ -152,9 +152,13 @@ export default function DashboardPage() {
         return;
       }
       if (data.remaining !== undefined) setRemaining(data.remaining);
+      // Always surface debug info while troubleshooting
+      if (data.debug) setDebugInfo(JSON.stringify(data.debug, null, 2));
+      const upsertFailed = data.debug && (data.debug.upsertStatus as number) >= 400;
       if ((data.count ?? 0) === 0) {
         setError("No new jobs found. Try again later or update your target role in Profile.");
-        if (data.debug) setDebugInfo(JSON.stringify(data.debug, null, 2));
+      } else if (upsertFailed) {
+        setError(`Scored ${data.count} jobs but database save failed — see debug info below.`);
       }
 
       // Reload jobs

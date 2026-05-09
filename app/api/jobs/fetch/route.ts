@@ -43,24 +43,30 @@ export async function POST(req: NextRequest) {
 
     // Fetch jobs from Adzuna — try progressively simpler queries if needed
     let searchQuery = user.target_role;
-    let adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
+    let adzunaError = "";
+    let adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
+    try {
+      adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
+    } catch (e) {
+      adzunaError = (e as { message?: string }).message ?? String(e);
+    }
 
-    if (adzunaJobs.length === 0) {
+    if (!adzunaError && adzunaJobs.length === 0) {
       const simplified = user.target_role
         .replace(/[\s-]+(focused|roles?|positions?|opportunities?|specialist).*$/i, "")
         .split(/\s+(?:and|or|\/)\s+/)[0]
         .trim();
       if (simplified && simplified !== user.target_role) {
         searchQuery = simplified;
-        adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
+        try { adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || ""); } catch { /* ignore */ }
       }
     }
 
-    if (adzunaJobs.length === 0) {
+    if (adzunaJobs.length === 0 && !adzunaError) {
       const twoWords = user.target_role.trim().split(/\s+/).slice(0, 2).join(" ");
       if (twoWords && twoWords !== searchQuery) {
         searchQuery = twoWords;
-        adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
+        try { adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || ""); } catch { /* ignore */ }
       }
     }
 
@@ -176,7 +182,7 @@ JSON format:
       success: true,
       count: scoredJobs.length,
       remaining: remaining - 1,
-      debug: { searchQuery, adzunaCount, scored: scoredJobs.length, scoringErrors, upsertStatus, upsertBody },
+      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, upsertStatus, upsertBody },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
