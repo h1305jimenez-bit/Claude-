@@ -64,10 +64,19 @@ export async function POST(req: NextRequest) {
         if (adzunaJobs.length >= 16) break;
         try {
           let results = await fetchAdzunaJobs(role, loc);
-          // Fallback: if niche title returns nothing, retry with simplified role
+          // Fallback 1: niche title → try simplified 2-word version with same location
           if (results.length === 0) {
             const simplified = simplifyRole(role);
             if (simplified) results = await fetchAdzunaJobs(simplified, loc);
+          }
+          // Fallback 2: still nothing → try original role worldwide (no location filter)
+          if (results.length === 0 && loc) {
+            results = await fetchAdzunaJobs(role, "");
+          }
+          // Fallback 3: still nothing → try simplified role worldwide
+          if (results.length === 0 && loc) {
+            const simplified = simplifyRole(role);
+            if (simplified) results = await fetchAdzunaJobs(simplified, "");
           }
           for (const job of results) {
             if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
@@ -153,17 +162,15 @@ JSON format:
 
     const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
 
-    // Delete stale 'new' jobs before inserting fresh ones so old location/role results don't linger
-    if (scoredJobs.length > 0) {
-      await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "apikey": ANON_KEY,
-          "Prefer": "return=minimal",
-        },
-      });
-    }
+    // Always delete stale 'new' jobs on refresh so old location/role results never linger
+    await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "apikey": ANON_KEY,
+        "Prefer": "return=minimal",
+      },
+    });
 
     // Upsert jobs via raw REST (bypasses SDK key issues)
     let upsertStatus = 0;
