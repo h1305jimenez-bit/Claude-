@@ -13,6 +13,14 @@ const scoreColor = (score: number) => {
   return "text-text-dimmed";
 };
 
+function daysAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000);
+  if (days === 0) return "today";
+  if (days === 1) return "1d ago";
+  return `${days}d ago`;
+}
+
 const statusLabel: Record<string, string> = {
   new: "New",
   open: "Open",
@@ -54,6 +62,11 @@ export function JobRow({ job }: JobRowProps) {
             {job.estimated_time && (
               <span className="text-xs text-text-dimmed font-dm-sans">
                 ~{job.estimated_time}
+              </span>
+            )}
+            {daysAgo(job.posted_date) && (
+              <span className="text-xs text-text-dimmed font-dm-sans ml-auto">
+                {daysAgo(job.posted_date)}
               </span>
             )}
           </div>

@@ -62,19 +62,19 @@ export async function POST(req: NextRequest) {
     for (const role of roles) {
       for (const loc of locations) {
         if (adzunaJobs.length >= 16) break;
+        const isWorldwide = !loc || /remote|worldwide/i.test(loc);
         try {
           let results = await fetchAdzunaJobs(role, loc);
-          // Fallback 1: niche title → try simplified 2-word version with same location
+          // Fallback 1: niche title → try simplified 2-word version, same location
           if (results.length === 0) {
             const simplified = simplifyRole(role);
             if (simplified) results = await fetchAdzunaJobs(simplified, loc);
           }
-          // Fallback 2: still nothing → try original role worldwide (no location filter)
-          if (results.length === 0 && loc) {
+          // Fallback 2 & 3: only go worldwide when no specific location is set
+          if (results.length === 0 && isWorldwide) {
             results = await fetchAdzunaJobs(role, "");
           }
-          // Fallback 3: still nothing → try simplified role worldwide
-          if (results.length === 0 && loc) {
+          if (results.length === 0 && isWorldwide) {
             const simplified = simplifyRole(role);
             if (simplified) results = await fetchAdzunaJobs(simplified, "");
           }
