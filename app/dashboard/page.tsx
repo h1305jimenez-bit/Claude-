@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/Sidebar";
 import { JobRow } from "@/components/JobRow";
@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [showAddJob, setShowAddJob] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const autoRefreshDone = useRef(false);
 
   const supabase = createBrowserSupabase();
 
@@ -65,7 +66,19 @@ export default function DashboardPage() {
         ? Date.now() - new Date(lastJob.created_at).getTime() > 24 * 60 * 60 * 1000
         : true;
 
-      if (!hasJobs || isStale) {
+      // Only auto-refresh once per page session, and only if we have refreshes left
+      const userData2 = userRes as User[];
+      const refreshesLeft = userData2[0]
+        ? (() => {
+            const u = userData2[0];
+            const today = new Date().toDateString();
+            const resetDate = u.daily_refreshes_reset_at ? new Date(u.daily_refreshes_reset_at).toDateString() : null;
+            return today !== resetDate ? 5 : Math.max(0, 5 - (u.daily_refreshes_used ?? 0));
+          })()
+        : 0;
+
+      if ((!hasJobs || isStale) && !autoRefreshDone.current && refreshesLeft > 0) {
+        autoRefreshDone.current = true;
         await triggerRefresh(false, token);
       }
     } finally {

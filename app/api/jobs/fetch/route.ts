@@ -41,8 +41,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Set a target role in your profile first." }, { status: 400 });
     }
 
-    // Fetch jobs from Adzuna
-    const adzunaJobs = await fetchAdzunaJobs(user.target_role, user.target_location || "");
+    // Fetch jobs from Adzuna — try progressively simpler queries if needed
+    let adzunaJobs = await fetchAdzunaJobs(user.target_role, user.target_location || "");
+
+    if (adzunaJobs.length === 0) {
+      // Strip filler phrases and try again with a shorter query
+      const simplified = user.target_role
+        .replace(/[\s-]+(focused|roles?|positions?|opportunities?|specialist).*$/i, "")
+        .split(/\s+(?:and|or|\/)\s+/)[0]
+        .trim();
+      if (simplified && simplified !== user.target_role) {
+        adzunaJobs = await fetchAdzunaJobs(simplified, user.target_location || "");
+      }
+    }
+
+    if (adzunaJobs.length === 0) {
+      // Last resort: use just the first two words
+      const twoWords = user.target_role.trim().split(/\s+/).slice(0, 2).join(" ");
+      if (twoWords && twoWords !== user.target_role) {
+        adzunaJobs = await fetchAdzunaJobs(twoWords, user.target_location || "");
+      }
+    }
+
     const jobsToScore = adzunaJobs.slice(0, 8);
 
     const candidateContext = `Role: ${user.target_role}
