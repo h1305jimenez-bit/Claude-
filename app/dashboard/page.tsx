@@ -270,6 +270,11 @@ export default function DashboardPage() {
             remaining={remaining}
             onRefresh={() => triggerRefresh(true)}
             loading={refreshing}
+            onReset={async () => {
+              if (!accessToken) return;
+              await fetch("/api/fix/reset-refreshes", { method: "POST", headers: { "x-access-token": accessToken } });
+              setRemaining(5);
+            }}
           />
 
           {user && (

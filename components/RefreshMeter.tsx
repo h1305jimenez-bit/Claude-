@@ -1,13 +1,16 @@
 "use client";
 
+"use client";
+
 interface RefreshMeterProps {
   remaining: number;
   total?: number;
   onRefresh: () => void;
   loading: boolean;
+  onReset?: () => void;
 }
 
-export function RefreshMeter({ remaining, total = 5, onRefresh, loading }: RefreshMeterProps) {
+export function RefreshMeter({ remaining, total = 5, onRefresh, loading, onReset }: RefreshMeterProps) {
   const used = total - remaining;
 
   return (
@@ -34,6 +37,14 @@ export function RefreshMeter({ remaining, total = 5, onRefresh, loading }: Refre
       >
         {loading ? "Fetching..." : "Refresh jobs"}
       </button>
+      {remaining === 0 && onReset && (
+        <button
+          onClick={onReset}
+          className="w-full mt-2 py-1.5 px-3 text-xs border border-border rounded-card text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] font-dm-sans"
+        >
+          Reset counter
+        </button>
+      )}
     </div>
   );
 }
