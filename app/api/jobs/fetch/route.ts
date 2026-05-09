@@ -153,6 +153,18 @@ JSON format:
 
     const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
 
+    // Delete stale 'new' jobs before inserting fresh ones so old location/role results don't linger
+    if (scoredJobs.length > 0) {
+      await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": ANON_KEY,
+          "Prefer": "return=minimal",
+        },
+      });
+    }
+
     // Upsert jobs via raw REST (bypasses SDK key issues)
     let upsertStatus = 0;
     let upsertBody = "";
