@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const [uploadingCv, setUploadingCv] = useState(false);
   const [message, setMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [suggestedRoles, setSuggestedRoles] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [preferences, setPreferences] = useState({
     name: "",
     phone: "",
@@ -137,6 +139,23 @@ export default function ProfilePage() {
     if (data.url) window.location.href = data.url;
   };
 
+  const handleSuggestRoles = async () => {
+    if (!accessToken) return;
+    setLoadingSuggestions(true);
+    setSuggestedRoles([]);
+    try {
+      const res = await fetch("/api/user/suggest-roles", {
+        method: "POST",
+        headers: { "x-access-token": accessToken },
+      });
+      const data = await res.json() as { suggestions?: string[]; error?: string };
+      if (data.suggestions) setSuggestedRoles(data.suggestions);
+      else setMessage(data.error ?? "Could not generate suggestions");
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData.session?.user.id;
@@ -243,7 +262,61 @@ export default function ProfilePage() {
               { key: "phone", label: "Phone", type: "tel" },
               { key: "linkedin", label: "LinkedIn URL", type: "url" },
               { key: "education", label: "Education", type: "text" },
-              { key: "target_role", label: "Target role", type: "text" },
+            ].map((field) => (
+              <div key={field.key}>
+                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">{field.label}</label>
+                <input
+                  type={field.type}
+                  value={preferences[field.key as keyof typeof preferences]}
+                  onChange={(e) =>
+                    setPreferences((p) => ({ ...p, [field.key]: e.target.value }))
+                  }
+                  className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
+              </div>
+            ))}
+
+            {/* Target role with suggestions */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-text-dimmed font-dm-sans">Target role</label>
+                <button
+                  onClick={handleSuggestRoles}
+                  disabled={loadingSuggestions || !user?.cv_text}
+                  className="text-xs font-dm-sans text-text-dimmed hover:text-text-primary transition-all duration-[150ms] disabled:opacity-40"
+                >
+                  {loadingSuggestions ? "Thinking..." : "✦ Suggest from CV"}
+                </button>
+              </div>
+              <input
+                type="text"
+                value={preferences.target_role}
+                onChange={(e) => setPreferences((p) => ({ ...p, target_role: e.target.value }))}
+                className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+              />
+              {suggestedRoles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {suggestedRoles.map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => {
+                        setPreferences((p) => ({ ...p, target_role: role }));
+                        setSuggestedRoles([]);
+                      }}
+                      className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${
+                        preferences.target_role === role
+                          ? "border-text-primary text-text-primary bg-surface-secondary"
+                          : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {[
               { key: "target_location", label: "Target location", type: "text" },
               { key: "seniority", label: "Seniority", type: "text" },
               { key: "salary_expectation", label: "Salary expectation", type: "text" },
