@@ -504,6 +504,25 @@ export default function ProfilePage() {
 
         {tab === "Account" && (
           <div className="space-y-6">
+            {/* Chrome Extension */}
+            <div className="border border-border rounded-[8px] p-6 bg-surface">
+              <h3 className="font-dm-sans font-medium text-text-primary mb-1">Chrome Extension</h3>
+              <p className="text-xs text-text-dimmed font-dm-sans mb-4">
+                Auto-fill job applications on Greenhouse, Lever, Workday and more. Click below to copy your session token, then paste it into the extension popup.
+              </p>
+              <button
+                onClick={() => {
+                  if (accessToken) {
+                    navigator.clipboard.writeText(accessToken);
+                    setMessage("Token copied — paste it in the ApplyPilot extension popup.");
+                  }
+                }}
+                className="px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-primary hover:bg-surface-secondary transition-all duration-[150ms]"
+              >
+                Copy extension token
+              </button>
+            </div>
+
             <div className="border border-border rounded-[8px] p-6 bg-surface">
               <h3 className="font-dm-sans font-medium text-text-primary mb-2">Current plan</h3>
               <p className="font-syne font-bold text-2xl text-text-primary capitalize mb-4">

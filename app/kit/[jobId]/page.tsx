@@ -252,7 +252,9 @@ export default function KitPage() {
                 View job posting ↗
               </a>
               <a
-                href="/autoapply"
+                href={job.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-4 py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
               >
                 Apply →
