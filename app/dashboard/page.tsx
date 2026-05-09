@@ -79,17 +79,19 @@ export default function DashboardPage() {
     setError("");
     try {
       const res = await fetch("/api/jobs/fetch", { method: "POST" });
-      const data = await res.json() as { count?: number; remaining?: number; error?: string };
+      let data: { count?: number; remaining?: number; error?: string } = {};
+      try { data = await res.json(); } catch { /* non-JSON response */ }
       if (!res.ok) {
         if (data.error === "daily_limit_reached") {
           setError("Daily refresh limit reached.");
           setRemaining(0);
         } else {
-          setError(data.error ?? "Refresh failed");
+          setError(data.error ?? `Server error ${res.status}`);
         }
         return;
       }
       if (data.remaining !== undefined) setRemaining(data.remaining);
+      if ((data.count ?? 0) === 0) setError("No new jobs found. Try again later or update your target role in Profile.");
 
       // Reload jobs
       const { data: sessionData } = await supabase.auth.getSession();
@@ -102,6 +104,9 @@ export default function DashboardPage() {
           .order("score", { ascending: false });
         if (newJobs) setJobs(newJobs as Job[]);
       }
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setError(`Refresh failed: ${e.message ?? "network error"}`);
     } finally {
       setRefreshing(false);
     }
