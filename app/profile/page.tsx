@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [suggestedRoles, setSuggestedRoles] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [preferences, setPreferences] = useState({
     name: "",
     phone: "",
@@ -48,6 +49,8 @@ export default function ProfilePage() {
       if (data) {
         const u = data as User;
         setUser(u);
+        const roles = u.target_role ? u.target_role.split(",").map((r: string) => r.trim()).filter(Boolean) : [];
+        setSelectedRoles(roles);
         setPreferences({
           name: u.name || "",
           phone: u.phone || "",
@@ -59,6 +62,18 @@ export default function ProfilePage() {
           salary_expectation: u.salary_expectation || "",
           work_authorization: u.work_authorization || "",
         });
+        // Auto-fetch suggestions if CV exists
+        if (u.cv_text) {
+          const token = sessionData.session?.access_token;
+          if (token) {
+            setLoadingSuggestions(true);
+            fetch("/api/user/suggest-roles", { method: "POST", headers: { "x-access-token": token } })
+              .then(r => r.json())
+              .then((d: { suggestions?: string[] }) => { if (d.suggestions) setSuggestedRoles(d.suggestions); })
+              .catch(() => {})
+              .finally(() => setLoadingSuggestions(false));
+          }
+        }
       }
     } finally {
       setLoading(false);
@@ -276,44 +291,95 @@ export default function ProfilePage() {
               </div>
             ))}
 
-            {/* Target role with suggestions */}
+            {/* Target roles — multi-select */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs text-text-dimmed font-dm-sans">Target role</label>
-                <button
-                  onClick={handleSuggestRoles}
-                  disabled={loadingSuggestions || !user?.cv_text}
-                  className="text-xs font-dm-sans text-text-dimmed hover:text-text-primary transition-all duration-[150ms] disabled:opacity-40"
-                >
-                  {loadingSuggestions ? "Thinking..." : "✦ Suggest from CV"}
-                </button>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-text-dimmed font-dm-sans">Target roles</label>
+                {loadingSuggestions && (
+                  <span className="text-xs text-text-dimmed font-dm-sans animate-pulse">Suggesting from CV...</span>
+                )}
               </div>
-              <input
-                type="text"
-                value={preferences.target_role}
-                onChange={(e) => setPreferences((p) => ({ ...p, target_role: e.target.value }))}
-                className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-              />
-              {suggestedRoles.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {suggestedRoles.map((role) => (
-                    <button
+
+              {/* Selected roles as tags */}
+              {selectedRoles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedRoles.map((role) => (
+                    <span
                       key={role}
-                      onClick={() => {
-                        setPreferences((p) => ({ ...p, target_role: role }));
-                        setSuggestedRoles([]);
-                      }}
-                      className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${
-                        preferences.target_role === role
-                          ? "border-text-primary text-text-primary bg-surface-secondary"
-                          : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"
-                      }`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full"
                     >
                       {role}
-                    </button>
+                      <button
+                        onClick={() => {
+                          const updated = selectedRoles.filter(r => r !== role);
+                          setSelectedRoles(updated);
+                          setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                        }}
+                        className="opacity-60 hover:opacity-100 leading-none"
+                      >×</button>
+                    </span>
                   ))}
                 </div>
               )}
+
+              {/* Suggestions */}
+              {suggestedRoles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {suggestedRoles.map((role) => {
+                    const selected = selectedRoles.includes(role);
+                    return (
+                      <button
+                        key={role}
+                        onClick={() => {
+                          const updated = selected
+                            ? selectedRoles.filter(r => r !== role)
+                            : [...selectedRoles, role];
+                          setSelectedRoles(updated);
+                          setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                        }}
+                        className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${
+                          selected
+                            ? "border-text-primary text-text-primary bg-surface-secondary"
+                            : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"
+                        }`}
+                      >
+                        {selected ? "✓ " : ""}{role}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Manual input fallback */}
+              <input
+                type="text"
+                placeholder={selectedRoles.length > 0 ? "Add another role..." : "Type a role or pick from suggestions above"}
+                value={""}
+                onChange={(e) => {
+                  if (e.target.value.endsWith(",") || e.target.value.endsWith("\n")) {
+                    const newRole = e.target.value.replace(/[,\n]$/, "").trim();
+                    if (newRole && !selectedRoles.includes(newRole)) {
+                      const updated = [...selectedRoles, newRole];
+                      setSelectedRoles(updated);
+                      setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                    }
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val && !selectedRoles.includes(val)) {
+                      const updated = [...selectedRoles, val];
+                      setSelectedRoles(updated);
+                      setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                    e.preventDefault();
+                  }
+                }}
+                className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+              />
+              <p className="text-xs text-text-dimmed font-dm-sans mt-1">Select from suggestions or type + press Enter</p>
             </div>
 
             {[

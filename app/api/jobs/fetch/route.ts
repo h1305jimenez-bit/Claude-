@@ -41,32 +41,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Set a target role in your profile first." }, { status: 400 });
     }
 
-    // Fetch jobs from Adzuna — try progressively simpler queries if needed
-    let searchQuery = user.target_role;
+    // Support multiple comma-separated roles
+    const roles = user.target_role.split(",").map((r: string) => r.trim()).filter(Boolean);
     let adzunaError = "";
+    let searchQuery = roles[0] || user.target_role;
+    const seenIds = new Set<string>();
     let adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
-    try {
-      adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || "");
-    } catch (e) {
-      adzunaError = (e as { message?: string }).message ?? String(e);
-    }
 
-    if (!adzunaError && adzunaJobs.length === 0) {
-      const simplified = user.target_role
-        .replace(/[\s-]+(focused|roles?|positions?|opportunities?|specialist).*$/i, "")
-        .split(/\s+(?:and|or|\/)\s+/)[0]
-        .trim();
-      if (simplified && simplified !== user.target_role) {
-        searchQuery = simplified;
-        try { adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || ""); } catch { /* ignore */ }
-      }
-    }
-
-    if (adzunaJobs.length === 0 && !adzunaError) {
-      const twoWords = user.target_role.trim().split(/\s+/).slice(0, 2).join(" ");
-      if (twoWords && twoWords !== searchQuery) {
-        searchQuery = twoWords;
-        try { adzunaJobs = await fetchAdzunaJobs(searchQuery, user.target_location || ""); } catch { /* ignore */ }
+    // Fetch for each role and combine (up to 8 total)
+    for (const role of roles) {
+      if (adzunaJobs.length >= 8) break;
+      try {
+        const results = await fetchAdzunaJobs(role, user.target_location || "");
+        for (const job of results) {
+          if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
+          if (adzunaJobs.length >= 16) break;
+        }
+        searchQuery = role;
+      } catch (e) {
+        adzunaError = (e as { message?: string }).message ?? String(e);
       }
     }
 
