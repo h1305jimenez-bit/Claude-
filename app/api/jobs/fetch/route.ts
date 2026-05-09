@@ -121,8 +121,11 @@ JSON format:
           url: job.redirect_url,
           description: job.description || "",
           posted_date: job.created,
-          application_flow: parsed.applicationFlow,
-          tip: parsed.tip,
+          // application_flow and tip require DB migration — stored separately once columns exist
+          ...(process.env.JOBS_EXTENDED_COLUMNS === "true" && {
+            application_flow: parsed.applicationFlow,
+            tip: parsed.tip,
+          }),
         };
       })
     );
