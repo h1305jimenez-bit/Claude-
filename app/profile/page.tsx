@@ -45,12 +45,18 @@ export default function ProfilePage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
-      if (!userId) { router.push("/auth"); return; }
-      setAccessToken(sessionData.session?.access_token ?? null);
+      const token = sessionData.session?.access_token ?? null;
+      if (!userId || !token) { router.push("/auth"); return; }
+      setAccessToken(token);
 
-      const { data } = await supabase.from("users").select("*").eq("id", userId).single();
-      if (data) {
-        const u = data as User;
+      // Use raw fetch — Supabase SDK key format causes issues
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*&limit=1`,
+        { headers: { "Authorization": `Bearer ${token}`, "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" } }
+      );
+      const rows = await res.json() as User[];
+      const u = rows[0];
+      if (u) {
         setUser(u);
         const roles = u.target_role ? u.target_role.split(",").map((r: string) => r.trim()).filter(Boolean) : [];
         setSelectedRoles(roles);
@@ -67,17 +73,13 @@ export default function ProfilePage() {
           salary_expectation: u.salary_expectation || "",
           work_authorization: u.work_authorization || "",
         });
-        // Auto-fetch suggestions if CV exists
         if (u.cv_text) {
-          const token = sessionData.session?.access_token;
-          if (token) {
-            setLoadingSuggestions(true);
-            fetch("/api/user/suggest-roles", { method: "POST", headers: { "x-access-token": token } })
-              .then(r => r.json())
-              .then((d: { suggestions?: string[] }) => { if (d.suggestions) setSuggestedRoles(d.suggestions); })
-              .catch(() => {})
-              .finally(() => setLoadingSuggestions(false));
-          }
+          setLoadingSuggestions(true);
+          fetch("/api/user/suggest-roles", { method: "POST", headers: { "x-access-token": token } })
+            .then(r => r.json())
+            .then((d: { suggestions?: string[] }) => { if (d.suggestions) setSuggestedRoles(d.suggestions); })
+            .catch(() => {})
+            .finally(() => setLoadingSuggestions(false));
         }
       }
     } finally {
