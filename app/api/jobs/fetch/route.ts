@@ -254,7 +254,7 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
             return /\/(jobs|careers|apply|job|position|vacancy|opening|hiring)\b/.test(u.pathname.toLowerCase());
           } catch { return false; }
         })();
-        const finalUrl = isValidCareerUrl ? claudeUrl : (resolvedUrlMap.get(job.id) ?? job.redirect_url);
+        const finalUrl = (isValidCareerUrl && claudeUrl) ? claudeUrl : (resolvedUrlMap.get(job.id) ?? job.redirect_url);
         scoredJobs.push({
           user_id: userId,
           adzuna_id: job.id,
