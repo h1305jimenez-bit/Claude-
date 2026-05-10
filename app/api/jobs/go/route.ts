@@ -8,20 +8,20 @@ const ATS_DOMAINS = [
   "amazon.jobs", "careers.google.com", "jobs.apple.com",
   "careers.microsoft.com", "metacareers.com", "jobs.netflix.com",
   "jobs.lever.co", "boards.greenhouse.io", "apply.workable.com",
+  "careers.shopify.com", "stripe.com/jobs", "airbnb.design/careers",
 ];
 
 function extractAtsUrl(text: string): string | null {
-  const urlRe = /https?:\/\/[^\s"'<>)]+/g;
-  for (const m of text.matchAll(urlRe)) {
+  for (const m of text.matchAll(/https?:\/\/[^\s"'<>)]+/g)) {
     const u = m[0].replace(/[).,;]+$/, "");
     if (ATS_DOMAINS.some(d => u.includes(d))) return u;
   }
   return null;
 }
 
-async function resolveAdzunaUrl(url: string): Promise<string> {
+async function resolveAdzunaUrl(url: string): Promise<string | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -35,26 +35,24 @@ async function resolveAdzunaUrl(url: string): Promise<string> {
     });
     clearTimeout(timer);
 
-    // Successfully redirected away from Adzuna — use that URL directly
     const finalUrl = res.url;
     if (finalUrl && !finalUrl.includes("adzuna.com") && finalUrl !== url) return finalUrl;
 
-    // Still on Adzuna — parse the page HTML
     const html = await res.text();
 
-    // 1. Adzuna uses Next.js; the SSR payload in __NEXT_DATA__ often contains the source URL
+    // 1. __NEXT_DATA__ (Adzuna uses Next.js SSR — the apply URL is often here)
     const nextData = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i)?.[1];
     if (nextData) {
-      const applyMatch = nextData.match(
-        /"(?:apply_url|source_url|external_url|applyUrl|sourceUrl|externalUrl|job_url|apply_link|directUrl|direct_url|applicationUrl)"\s*:\s*"(https?:\/\/(?![^"]*adzuna)[^"]+)"/
+      const m = nextData.match(
+        /"(?:apply_url|source_url|external_url|applyUrl|sourceUrl|externalUrl|job_url|apply_link|directUrl|direct_url|applicationUrl|apply)"\s*:\s*"(https?:\/\/(?![^"]*adzuna)[^"]+)"/
       );
-      if (applyMatch) return applyMatch[1];
+      if (m) return m[1];
 
-      // Broader scan: any non-Adzuna https URL associated with apply/source keys
-      const broadMatch = nextData.match(
-        /"(?:[a-z_]*(?:apply|source|external|direct)[a-z_]*)"\s*:\s*"(https?:\/\/(?![^"]*adzuna)[^"]+)"/i
+      // Broader: any key containing "apply" or "source" paired with an external URL
+      const broad = nextData.match(
+        /"[a-z_]*(?:apply|source|external|direct)[a-z_]*"\s*:\s*"(https?:\/\/(?![^"]*adzuna)[^"]+)"/i
       );
-      if (broadMatch) return broadMatch[1];
+      if (broad) return broad[1];
     }
 
     // 2. JSON-LD structured data
@@ -68,36 +66,42 @@ async function resolveAdzunaUrl(url: string): Promise<string> {
       } catch { /* ignore */ }
     }
 
-    // 3. href attributes pointing to known ATS / career domains
+    // 3. href attributes pointing to ATS / known career domains
     for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
       if (ATS_DOMAINS.some(d => m[1].includes(d))) return m[1];
     }
 
-    // 4. data-apply-url or similar attributes
-    const dataMatch = html.match(/data-(?:href|url|apply-?url|source-?url)="(https?:\/\/(?![^"]*adzuna)[^"]+)"/i);
-    if (dataMatch) return dataMatch[1];
-
-    // 5. Any non-Adzuna URL embedded in page data attributes or script tags
-    const atsFromHtml = extractAtsUrl(html);
-    if (atsFromHtml) return atsFromHtml;
+    // 4. Any ATS URL embedded in the page
+    const fromHtml = extractAtsUrl(html);
+    if (fromHtml) return fromHtml;
 
   } catch { /* fall through */ }
   finally { clearTimeout(timer); }
 
-  return url;
+  return null;
 }
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
+  const company = req.nextUrl.searchParams.get("company") ?? "";
+  const role = req.nextUrl.searchParams.get("role") ?? "";
+
   if (!url || !url.startsWith("http")) {
     return NextResponse.json({ error: "Invalid url" }, { status: 400 });
   }
 
-  // Not an Adzuna URL — redirect immediately, no processing needed
+  // Already a direct company/ATS URL — redirect immediately
   if (!url.includes("adzuna.com")) {
     return NextResponse.redirect(url);
   }
 
+  // Try to resolve the Adzuna URL to a company page
   const resolved = await resolveAdzunaUrl(url);
-  return NextResponse.redirect(resolved);
+  if (resolved) return NextResponse.redirect(resolved);
+
+  // Could not resolve — fall back to a Google search for the specific job
+  // This guarantees the user never lands on Adzuna
+  const query = [company, role, "careers apply"].filter(Boolean).join(" ");
+  const fallback = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  return NextResponse.redirect(fallback);
 }

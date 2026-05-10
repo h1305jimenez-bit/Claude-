@@ -198,7 +198,7 @@ Title: ${job.title}
 Description: ${(job.description || "").slice(0, 800)}
 
 JSON format:
-{"score":<0-100>,"rationale":"<one sentence>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"applicationFlow":[{"name":"<step>","detail":"<what>","fields":["<field>"]}],"tip":"<one tip>"}`;
+{"score":<0-100>,"rationale":"<one sentence>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"applicationFlow":[{"name":"<step>","detail":"<what>","fields":["<field>"]}],"tip":"<one tip>","careerUrl":"<direct URL to the company job posting or careers page — extract from description if present, or use known career page (e.g. jobs.amazon.com, careers.google.com, metacareers.com, careers.microsoft.com, jobs.apple.com). Empty string if truly unknown>"}`;
 
         const response = await anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
@@ -215,7 +215,13 @@ JSON format:
           steps: number; estimatedMinutes: number;
           applicationFlow: { name: string; detail: string; fields: string[] }[];
           tip: string;
+          careerUrl?: string;
         };
+
+        // Prefer Claude-extracted career URL, then Adzuna-resolved URL, then raw redirect
+        const claudeUrl = parsed.careerUrl;
+        const isValidCareerUrl = claudeUrl && claudeUrl.startsWith("http") && !claudeUrl.includes("adzuna.com");
+        const finalUrl = isValidCareerUrl ? claudeUrl : (resolvedUrlMap.get(job.id) ?? job.redirect_url);
 
         return {
           user_id: userId,
@@ -231,7 +237,7 @@ JSON format:
           estimated_time: `${parsed.estimatedMinutes} min`,
           status: "new",
           kit_ready: false,
-          url: resolvedUrlMap.get(job.id) ?? job.redirect_url,
+          url: finalUrl,
           description: job.description || "",
           posted_date: job.created,
           // application_flow and tip require DB migration — stored separately once columns exist
