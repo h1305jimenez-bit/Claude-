@@ -10,7 +10,6 @@ import type { Job, Kit, User, JobInsights } from "@/lib/types";
 const TABS = [
   { key: "preview", label: "Application Preview" },
   { key: "insights", label: "Job Insights" },
-  { key: "personal", label: "Personal Info" },
   { key: "cover", label: "Cover Letter" },
   { key: "cv", label: "Tailored CV" },
   { key: "screening", label: "Screening Answers" },
@@ -223,21 +222,23 @@ export default function KitPage() {
         </div>
 
         {/* Generate CTA or upgrade prompt */}
-        {tab !== "preview" && !isPaid && (
+        {tab !== "preview" && tab !== "insights" && !isPaid && (
           <div className="border border-border rounded-[8px] p-8 text-center bg-surface mb-6">
             <p className="font-syne font-bold text-lg text-text-primary mb-2">Upgrade to Pro</p>
-            <p className="text-text-dimmed text-sm font-dm-sans mb-4">Generate full application kits for $9/month.</p>
+            <p className="text-text-dimmed text-sm font-dm-sans mb-4">
+              Unlimited job refreshes, plus tailored cover letters, CVs, screening answers, and skills gap analysis for every application.
+            </p>
             <a href="/profile" className="inline-block px-6 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
               Upgrade now →
             </a>
           </div>
         )}
 
-        {tab !== "preview" && isPaid && !kit && !generating && (
+        {tab !== "preview" && tab !== "insights" && isPaid && !kit && !generating && (
           <div className="border border-border rounded-[8px] p-8 text-center bg-surface mb-6">
             <p className="font-syne font-bold text-lg text-text-primary mb-2">Generate your application kit</p>
             <p className="text-text-dimmed text-sm font-dm-sans mb-4">
-              Claude will write a cover letter, tailored CV, screening answers, and skills gap analysis.
+              Get a tailored cover letter, CV, screening answers, and skills gap analysis for this role.
             </p>
             {error && <p className="text-xs text-red-500 font-dm-sans mb-3">{error}</p>}
             <button
@@ -530,43 +531,6 @@ export default function KitPage() {
                 </button>
               </>
             )}
-          </div>
-        )}
-
-        {tab === "personal" && (
-          <div className="space-y-4">
-            <KitPanel title="Contact information">
-              <div className="space-y-2">
-                {[
-                  ["Full name", user?.name],
-                  ["Email", user?.email],
-                  ["Phone", user?.phone],
-                  ["LinkedIn", user?.linkedin],
-                  ["Location", user?.target_location],
-                ].filter(([, v]) => v).map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between border border-border rounded-[8px] px-3 py-2 bg-background">
-                    <span className="text-xs text-text-dimmed font-dm-sans">{k}</span>
-                    <span className="text-sm font-dm-sans text-text-primary">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </KitPanel>
-            <KitPanel title="Career profile">
-              <div className="space-y-2">
-                {[
-                  ["Target role", user?.target_role],
-                  ["Seniority", user?.seniority],
-                  ["Work authorization", user?.work_authorization],
-                  ["Salary expectation", user?.salary_expectation],
-                  ["Education", user?.education],
-                ].filter(([, v]) => v).map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between border border-border rounded-[8px] px-3 py-2 bg-background">
-                    <span className="text-xs text-text-dimmed font-dm-sans">{k}</span>
-                    <span className="text-sm font-dm-sans text-text-primary">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </KitPanel>
           </div>
         )}
 

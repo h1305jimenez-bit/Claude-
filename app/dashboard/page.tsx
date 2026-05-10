@@ -293,6 +293,7 @@ export default function DashboardPage() {
         <aside className="w-64 border-l border-border p-6 shrink-0">
           <RefreshMeter
             remaining={remaining}
+            isPaid={user?.plan === "paid"}
             onRefresh={() => triggerRefresh(true)}
             loading={refreshing}
             onReset={async () => {
@@ -307,12 +308,15 @@ export default function DashboardPage() {
               <p className="text-xs text-text-dimmed font-dm-sans mb-1">Plan</p>
               <p className="font-syne font-bold text-text-primary capitalize">{user.plan}</p>
               {user.plan === "free" && (
-                <a
-                  href="/profile"
-                  className="block mt-3 text-xs text-center py-2 border border-border rounded-[8px] hover:bg-surface-secondary transition-all duration-[150ms] font-dm-sans"
-                >
-                  Upgrade to Pro →
-                </a>
+                <>
+                  <p className="text-xs text-text-dimmed font-dm-sans mt-1">Unlimited refreshes + full application kits</p>
+                  <a
+                    href="/profile"
+                    className="block mt-3 text-xs text-center py-2 border border-border rounded-[8px] hover:bg-surface-secondary transition-all duration-[150ms] font-dm-sans"
+                  >
+                    Upgrade to Pro →
+                  </a>
+                </>
               )}
             </div>
           )}
