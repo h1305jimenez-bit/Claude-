@@ -22,7 +22,15 @@
         "https://*.bamboohr.com/*",
         "https://*.workable.com/*",
         "https://*.jobvite.com/*",
-        "https://*.icims.com/*"
+        "https://*.icims.com/*",
+        "https://*.ashbyhq.com/*",
+        "https://*.taleo.net/*",
+        "https://*.recruitee.com/*",
+        "https://*.breezy.hr/*",
+        "https://amazon.jobs/*",
+        "https://*.metacareers.com/*",
+        "https://*.pinpointhq.com/*",
+        "https://*.rippling.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

@@ -111,8 +111,12 @@
   <!-- Setup view -->
   <div id="setupView" class="setup-box">
     <h2>Connect your account</h2>
-    <p>Open ApplyPilot in a tab and click <strong>Connect extension</strong> in your Profile settings, or paste your access token below.</p>
+    <p>Open ApplyPilot, go to <strong>Profile → Account</strong>, and click <strong>Copy extension token</strong>. Paste it below.</p>
     <input class="token-input" id="tokenInput" type="password" placeholder="Paste access token..." />
+    <div id="apiRow" style="display:none; margin-bottom:10px;">
+      <input class="token-input" id="apiInput" type="url" placeholder="App URL (e.g. https://yourapp.vercel.app)" style="margin-bottom:0; font-family:-apple-system,sans-serif;" />
+      <p style="font-size:10px;color:#6b6b6b;margin-top:4px;">Open the ApplyPilot app in any tab and this fills automatically.</p>
+    </div>
     <button class="btn btn-primary" id="connectBtn">Connect</button>
     <div class="status" id="setupStatus"></div>
   </div>

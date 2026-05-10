@@ -1,23 +1,41 @@
 // ApplyPilot popup — reads stored token, shows profile, triggers autofill
 
-const APPLYPILOT_API = "https://claude-2z15-g6gg5itpg-h1305jimenez-1454s-projects.vercel.app";
-
-async function getStoredToken() {
-  return new Promise(resolve => {
-    chrome.storage.local.get(["ap_token"], r => resolve(r.ap_token ?? null));
-  });
+async function getStored(keys) {
+  return new Promise(resolve => chrome.storage.local.get(keys, resolve));
 }
 
-async function storeToken(token) {
-  return new Promise(resolve => chrome.storage.local.set({ ap_token: token }, resolve));
+async function setStored(data) {
+  return new Promise(resolve => chrome.storage.local.set(data, resolve));
 }
 
-async function clearToken() {
-  return new Promise(resolve => chrome.storage.local.remove(["ap_token", "ap_user"], resolve));
+async function clearStored() {
+  return new Promise(resolve => chrome.storage.local.remove(["ap_token", "ap_api", "ap_user"], resolve));
 }
 
-async function fetchProfile(token) {
-  const res = await fetch(`${APPLYPILOT_API}/api/extension/profile`, {
+// Auto-detect API URL: check stored value first, then scan open tabs for the app
+async function resolveApiUrl() {
+  const { ap_api } = await getStored(["ap_api"]);
+  if (ap_api) return ap_api;
+  try {
+    const tabs = await chrome.tabs.query({});
+    const appPaths = ["/dashboard", "/profile", "/tracker", "/kit/", "/auth"];
+    for (const tab of tabs) {
+      if (!tab.url) continue;
+      try {
+        const u = new URL(tab.url);
+        if (appPaths.some(p => u.pathname.startsWith(p))) {
+          const base = `${u.protocol}//${u.host}`;
+          await setStored({ ap_api: base });
+          return base;
+        }
+      } catch { /* skip */ }
+    }
+  } catch { /* scripting permission issue */ }
+  return null;
+}
+
+async function fetchProfile(token, apiUrl) {
+  const res = await fetch(`${apiUrl}/api/extension/profile`, {
     headers: { "x-access-token": token },
   });
   if (!res.ok) throw new Error("Invalid token or session expired");
@@ -39,34 +57,60 @@ function detectPortal(url) {
   if (/workable\.com/.test(url)) return { name: "Workable", key: "workable" };
   if (/jobvite\.com/.test(url)) return { name: "Jobvite", key: "jobvite" };
   if (/icims\.com/.test(url)) return { name: "iCIMS", key: "icims" };
+  if (/ashbyhq\.com/.test(url)) return { name: "Ashby", key: "ashby" };
+  if (/taleo\.net/.test(url)) return { name: "Taleo", key: "taleo" };
+  if (/recruitee\.com/.test(url)) return { name: "Recruitee", key: "recruitee" };
+  if (/breezy\.hr/.test(url)) return { name: "Breezy HR", key: "breezy" };
+  if (/amazon\.jobs/.test(url)) return { name: "Amazon Jobs", key: "amazon" };
+  if (/metacareers\.com/.test(url)) return { name: "Meta Careers", key: "meta" };
+  if (/pinpointhq\.com/.test(url)) return { name: "Pinpoint", key: "pinpoint" };
+  if (/rippling\.com/.test(url)) return { name: "Rippling", key: "rippling" };
   return { name: "Unknown portal", key: null };
 }
 
 function buildFieldsPreview(profile) {
-  const fields = [
+  return [
     ["First name", profile.name?.split(" ")[0]],
     ["Last name", profile.name?.split(" ").slice(1).join(" ")],
     ["Email", profile.email],
     ["Phone", profile.phone],
     ["LinkedIn", profile.linkedin],
   ].filter(([, v]) => v);
-  return fields;
 }
 
 async function init() {
-  const token = await getStoredToken();
+  const { ap_token: token } = await getStored(["ap_token"]);
   const setupView = document.getElementById("setupView");
   const connectedView = document.getElementById("connectedView");
   const badge = document.getElementById("connectionBadge");
+  const apiRow = document.getElementById("apiRow");
+  const apiInput = document.getElementById("apiInput");
+
+  const apiUrl = await resolveApiUrl();
 
   if (!token) {
     setupView.style.display = "block";
     connectedView.style.display = "none";
+    if (apiUrl) {
+      apiInput.value = apiUrl;
+      apiRow.style.display = "none";
+    } else {
+      apiRow.style.display = "block";
+    }
+    return;
+  }
+
+  if (!apiUrl) {
+    setupView.style.display = "block";
+    connectedView.style.display = "none";
+    apiRow.style.display = "block";
+    showStatus(document.getElementById("setupStatus"),
+      "Open your ApplyPilot app in a tab, or enter the URL below.", "info");
     return;
   }
 
   try {
-    const data = await fetchProfile(token);
+    const data = await fetchProfile(token, apiUrl);
     const { user } = data;
 
     setupView.style.display = "none";
@@ -82,10 +126,10 @@ async function init() {
     const portal = detectPortal(tab?.url ?? "");
     document.getElementById("portalName").textContent = portal.name;
     const pb = document.getElementById("portalBadge");
-    pb.textContent = portal.key ? `Ready to fill` : "Open a job application page";
+    pb.textContent = portal.key ? "Ready to fill" : "Open a job application page";
     if (portal.key) pb.className = "portal-badge detected";
 
-    // Show fields preview
+    // Fields preview
     const fields = buildFieldsPreview(user);
     if (fields.length) {
       const list = document.getElementById("fieldsList");
@@ -99,21 +143,21 @@ async function init() {
     if (portal.key) {
       fillBtn.textContent = `Fill ${portal.name} form`;
       fillBtn.disabled = false;
-      fillBtn.onclick = () => triggerFill(tab, token, user, portal.key);
+      fillBtn.onclick = () => triggerFill(tab, user, portal.key);
     } else {
       fillBtn.textContent = "Navigate to a job application";
       fillBtn.disabled = true;
     }
 
   } catch {
-    await clearToken();
+    await clearStored();
     setupView.style.display = "block";
     connectedView.style.display = "none";
     showStatus(document.getElementById("setupStatus"), "Session expired — please reconnect.", "error");
   }
 }
 
-async function triggerFill(tab, token, user, portalKey) {
+async function triggerFill(tab, user, portalKey) {
   const fillBtn = document.getElementById("fillBtn");
   const fillStatus = document.getElementById("fillStatus");
   fillBtn.disabled = true;
@@ -140,22 +184,22 @@ async function triggerFill(tab, token, user, portalKey) {
   }
 }
 
-// This function runs INSIDE the job application tab
+// Runs INSIDE the job application tab via chrome.scripting.executeScript
 function fillForm(portalKey, user) {
   const firstName = user.name?.split(" ")[0] ?? "";
   const lastName = user.name?.split(" ").slice(1).join(" ") ?? "";
+  const fullName = `${firstName} ${lastName}`.trim();
 
-  // Field mapping per portal
   const PORTAL_MAPS = {
     greenhouse: [
       { selectors: ['input[id="first_name"]', 'input[name="first_name"]'], value: firstName },
       { selectors: ['input[id="last_name"]', 'input[name="last_name"]'], value: lastName },
       { selectors: ['input[id="email"]', 'input[name="email"]', 'input[type="email"]'], value: user.email },
       { selectors: ['input[id="phone"]', 'input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[id="job_application_answers_attributes_0_text_value"]'], value: user.linkedin },
+      { selectors: ['input[id="job_application_answers_attributes_0_text_value"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
     ],
     lever: [
-      { selectors: ['input[name="name"]', 'input[placeholder*="name" i]'], value: `${firstName} ${lastName}`.trim() },
+      { selectors: ['input[name="name"]', 'input[placeholder*="Full name" i]'], value: fullName },
       { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
       { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
       { selectors: ['input[name="urls[LinkedIn]"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
@@ -166,6 +210,12 @@ function fillForm(portalKey, user) {
       { selectors: ['input[data-automation-id="legalNameSection_lastName"]', 'input[id*="lastName"]'], value: lastName },
       { selectors: ['input[data-automation-id="email"]', 'input[type="email"]'], value: user.email },
       { selectors: ['input[data-automation-id="phone-number"]', 'input[type="tel"]'], value: user.phone },
+    ],
+    linkedin: [
+      { selectors: ['input[id$="-firstName"]', 'input[aria-label*="First name" i]'], value: firstName },
+      { selectors: ['input[id$="-lastName"]', 'input[aria-label*="Last name" i]'], value: lastName },
+      { selectors: ['input[id$="-phoneNumber"]', 'input[aria-label*="Phone" i]', 'input[type="tel"]'], value: user.phone },
+      { selectors: ['input[id$="-email"]', 'input[type="email"]'], value: user.email },
     ],
     smartrecruiters: [
       { selectors: ['input[name="firstName"]', 'input[id="firstName"]'], value: firstName },
@@ -184,6 +234,7 @@ function fillForm(portalKey, user) {
       { selectors: ['input[name="lastname"]', 'input[placeholder*="Last" i]'], value: lastName },
       { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
       { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
+      { selectors: ['input[name="linkedin"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
     ],
     jobvite: [
       { selectors: ['input[id="jv-firstName"]', 'input[name="firstName"]'], value: firstName },
@@ -191,7 +242,60 @@ function fillForm(portalKey, user) {
       { selectors: ['input[id="jv-email"]', 'input[type="email"]'], value: user.email },
       { selectors: ['input[id="jv-phone"]', 'input[type="tel"]'], value: user.phone },
     ],
-    // Generic fallback
+    icims: [
+      { selectors: ['input[name*="firstname" i]', 'input[id*="firstname" i]'], value: firstName },
+      { selectors: ['input[name*="lastname" i]', 'input[id*="lastname" i]'], value: lastName },
+      { selectors: ['input[type="email"]', 'input[name*="email" i]'], value: user.email },
+      { selectors: ['input[type="tel"]', 'input[name*="phone" i]'], value: user.phone },
+    ],
+    ashby: [
+      { selectors: ['input[name="name"]', 'input[placeholder*="Full name" i]'], value: fullName },
+      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
+      { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
+      { selectors: ['input[name="linkedin"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
+      { selectors: ['input[name="location"]', 'input[placeholder*="location" i]'], value: user.target_location },
+    ],
+    taleo: [
+      { selectors: ['input[name="ftFirstName"]', 'input[id*="firstName"]'], value: firstName },
+      { selectors: ['input[name="ftLastName"]', 'input[id*="lastName"]'], value: lastName },
+      { selectors: ['input[name="ftEmail"]', 'input[type="email"]'], value: user.email },
+      { selectors: ['input[name="ftPhone"]', 'input[type="tel"]'], value: user.phone },
+    ],
+    recruitee: [
+      { selectors: ['input[name="first_name"]', 'input[id*="first_name"]'], value: firstName },
+      { selectors: ['input[name="last_name"]', 'input[id*="last_name"]'], value: lastName },
+      { selectors: ['input[type="email"]', 'input[name="email"]'], value: user.email },
+      { selectors: ['input[type="tel"]', 'input[name="phone"]'], value: user.phone },
+    ],
+    breezy: [
+      { selectors: ['input[name="name"]', 'input[placeholder*="name" i]'], value: fullName },
+      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
+      { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
+    ],
+    amazon: [
+      { selectors: ['input[name="firstName"]', 'input[id*="firstName"]'], value: firstName },
+      { selectors: ['input[name="lastName"]', 'input[id*="lastName"]'], value: lastName },
+      { selectors: ['input[type="email"]', 'input[name="email"]'], value: user.email },
+      { selectors: ['input[type="tel"]', 'input[name="phone"]'], value: user.phone },
+    ],
+    meta: [
+      { selectors: ['input[name="first_name"]', 'input[placeholder*="First" i]'], value: firstName },
+      { selectors: ['input[name="last_name"]', 'input[placeholder*="Last" i]'], value: lastName },
+      { selectors: ['input[type="email"]', 'input[name*="email" i]'], value: user.email },
+      { selectors: ['input[type="tel"]', 'input[name*="phone" i]'], value: user.phone },
+    ],
+    pinpoint: [
+      { selectors: ['input[name="first_name"]', 'input[id*="first_name"]'], value: firstName },
+      { selectors: ['input[name="last_name"]', 'input[id*="last_name"]'], value: lastName },
+      { selectors: ['input[type="email"]'], value: user.email },
+      { selectors: ['input[type="tel"]'], value: user.phone },
+    ],
+    rippling: [
+      { selectors: ['input[name="firstName"]', 'input[placeholder*="First" i]'], value: firstName },
+      { selectors: ['input[name="lastName"]', 'input[placeholder*="Last" i]'], value: lastName },
+      { selectors: ['input[type="email"]'], value: user.email },
+      { selectors: ['input[type="tel"]'], value: user.phone },
+    ],
     default: [
       { selectors: ['input[name*="first" i][type="text"]', 'input[id*="first" i][type="text"]', 'input[placeholder*="First name" i]'], value: firstName },
       { selectors: ['input[name*="last" i][type="text"]', 'input[id*="last" i][type="text"]', 'input[placeholder*="Last name" i]'], value: lastName },
@@ -201,16 +305,16 @@ function fillForm(portalKey, user) {
     ],
   };
 
-  const fieldMap = PORTAL_MAPS[portalKey] ?? PORTAL_MAPS.default;
-  let filled = 0;
-
   function setNativeValue(el, value) {
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set
-      ?? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
-    nativeInputValueSetter?.call(el, value);
+    const proto = el.tagName === "TEXTAREA" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+    setter?.call(el, value);
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
+
+  const fieldMap = PORTAL_MAPS[portalKey] ?? PORTAL_MAPS.default;
+  let filled = 0;
 
   for (const { selectors, value } of fieldMap) {
     if (!value) continue;
@@ -230,15 +334,20 @@ function fillForm(portalKey, user) {
 // --- Connect flow ---
 document.getElementById("connectBtn").addEventListener("click", async () => {
   const tokenInput = document.getElementById("tokenInput");
+  const apiInput = document.getElementById("apiInput");
   const status = document.getElementById("setupStatus");
   const token = tokenInput.value.trim();
   if (!token) { showStatus(status, "Paste your access token first.", "error"); return; }
 
+  let apiUrl = apiInput.value.trim().replace(/\/$/, "");
+  if (!apiUrl) apiUrl = await resolveApiUrl() ?? "";
+  if (!apiUrl) { showStatus(status, "Enter your ApplyPilot app URL (e.g. https://yourapp.vercel.app).", "error"); return; }
+
   try {
     showStatus(status, "Verifying...", "info");
-    const data = await fetchProfile(token);
+    const data = await fetchProfile(token, apiUrl);
     if (!data.user) throw new Error("No user returned");
-    await storeToken(token);
+    await setStored({ ap_token: token, ap_api: apiUrl });
     showStatus(status, "Connected! Reloading...", "success");
     setTimeout(() => init(), 800);
   } catch (e) {
@@ -247,7 +356,7 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("disconnectBtn")?.addEventListener("click", async () => {
-  await clearToken();
+  await clearStored();
   init();
 });
 
