@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     // Fetch for each role+location combination and combine
     for (const role of roles) {
       for (const loc of locations) {
-        if (adzunaJobs.length >= 16) break;
+        if (adzunaJobs.length >= 50) break;
         const isWorldwide = !loc || /remote|worldwide/i.test(loc);
         try {
           let results = await fetchAdzunaJobs(role, loc);
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
           }
           for (const job of results) {
             if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
-            if (adzunaJobs.length >= 16) break;
+            if (adzunaJobs.length >= 50) break;
           }
           searchQuery = `${role}${loc ? ` in ${loc}` : ""}`;
         } catch (e) {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     const adzunaCount = adzunaJobs.length;
-    const jobsToScore = adzunaJobs.slice(0, 8);
+    const jobsToScore = adzunaJobs.slice(0, 20);
 
     // Resolve Adzuna tracking URLs to actual company career page URLs.
     // Adzuna's redirect_url lands on their own job detail page; we parse that page's HTML

@@ -76,23 +76,45 @@ export async function fetchAdzunaJobs(
   const detectedCountry = detectCountry(location);
 
   if (detectedCountry) {
-    // User has a specific country location — search just that country with more results
+    // If the location string is purely a country name (e.g. "United States", "Mexico"),
+    // don't pass it as `where` — Adzuna's `where` expects a city/region, not a country.
+    // Passing the full country name to the country endpoint returns very few results.
+    const isCountryOnly = Object.entries(COUNTRY_CODES).some(
+      ([key, code]) => code === detectedCountry && location.toLowerCase().trim() === key
+    );
+    const whereParam = isCountryOnly ? "" : location;
+
     try {
-      const response = await axios.get(
-        `https://api.adzuna.com/v1/api/jobs/${detectedCountry}/search/1`,
-        {
+      const [page1, page2] = await Promise.all([
+        axios.get(`https://api.adzuna.com/v1/api/jobs/${detectedCountry}/search/1`, {
           params: {
             app_id: process.env.ADZUNA_APP_ID,
             app_key: process.env.ADZUNA_API_KEY,
             what: role,
-            where: location,
-            results_per_page: 20,
+            ...(whereParam && { where: whereParam }),
+            results_per_page: 50,
             "content-type": "application/json",
           },
           timeout: 8000,
-        }
-      );
-      return response.data.results ?? [];
+        }).catch(() => ({ data: { results: [] } })),
+        axios.get(`https://api.adzuna.com/v1/api/jobs/${detectedCountry}/search/2`, {
+          params: {
+            app_id: process.env.ADZUNA_APP_ID,
+            app_key: process.env.ADZUNA_API_KEY,
+            what: role,
+            ...(whereParam && { where: whereParam }),
+            results_per_page: 50,
+            "content-type": "application/json",
+          },
+          timeout: 8000,
+        }).catch(() => ({ data: { results: [] } })),
+      ]);
+      const seen = new Set<string>();
+      const combined: AdzunaJob[] = [];
+      for (const job of [...(page1.data.results ?? []), ...(page2.data.results ?? [])]) {
+        if (!seen.has((job as AdzunaJob).id)) { seen.add((job as AdzunaJob).id); combined.push(job as AdzunaJob); }
+      }
+      return combined;
     } catch (e) {
       throw e;
     }
