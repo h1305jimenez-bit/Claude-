@@ -37,6 +37,25 @@ export default function KitPage() {
 
   const supabase = createBrowserSupabase();
 
+  function downloadText(content: string, filename: string) {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  const [copied, setCopied] = useState<string | null>(null);
+  function copyText(text: string, key: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -302,7 +321,7 @@ export default function KitPage() {
               <div className="border border-border rounded-[8px] p-8 text-center bg-surface">
                 <p className="font-syne font-bold text-lg text-text-primary mb-2">Generate job insights</p>
                 <p className="text-text-dimmed text-sm font-dm-sans mb-4">
-                  Claude will extract key skills, identify gaps, and give you ready-to-use talking points.
+                  Get a deep breakdown of key skills, alignment with your background, and ready-to-use talking points for interviews and your cover letter.
                 </p>
                 {insightsError && <p className="text-xs text-red-500 font-dm-sans mb-3">{insightsError}</p>}
                 <button
@@ -444,40 +463,117 @@ export default function KitPage() {
           </div>
         )}
 
-        {tab === "personal" && kit && (
-          <KitPanel title="Personal information">
-            <div className="space-y-3">
-              {Object.entries(kit.personal_info).map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between border border-border rounded-[8px] px-3 py-2 bg-background">
-                  <span className="text-xs text-text-dimmed font-dm-sans capitalize">{k}</span>
-                  <span className="text-sm font-dm-sans text-text-primary">{v}</span>
-                </div>
-              ))}
-            </div>
-          </KitPanel>
+        {tab === "personal" && (
+          <div className="space-y-4">
+            <KitPanel title="Contact information">
+              <div className="space-y-2">
+                {[
+                  ["Full name", user?.name],
+                  ["Email", user?.email],
+                  ["Phone", user?.phone],
+                  ["LinkedIn", user?.linkedin],
+                  ["Location", user?.target_location],
+                ].filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between border border-border rounded-[8px] px-3 py-2 bg-background">
+                    <span className="text-xs text-text-dimmed font-dm-sans">{k}</span>
+                    <span className="text-sm font-dm-sans text-text-primary">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </KitPanel>
+            <KitPanel title="Career profile">
+              <div className="space-y-2">
+                {[
+                  ["Target role", user?.target_role],
+                  ["Seniority", user?.seniority],
+                  ["Work authorization", user?.work_authorization],
+                  ["Salary expectation", user?.salary_expectation],
+                  ["Education", user?.education],
+                ].filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between border border-border rounded-[8px] px-3 py-2 bg-background">
+                    <span className="text-xs text-text-dimmed font-dm-sans">{k}</span>
+                    <span className="text-sm font-dm-sans text-text-primary">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </KitPanel>
+          </div>
         )}
 
         {tab === "cover" && kit && (
-          <KitPanel title="Cover letter">
-            <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap font-dm-sans text-sm text-text-primary leading-relaxed">{kit.cover_letter}</pre>
+          <div className="space-y-4">
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => copyText(kit.cover_letter, "cover")}
+                className="px-3 py-1.5 border border-border rounded-[8px] text-xs font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
+              >
+                {copied === "cover" ? "Copied ✓" : "Copy"}
+              </button>
+              <button
+                onClick={() => downloadText(kit.cover_letter, `Cover_Letter_${job.company}_${job.role}.txt`)}
+                className="px-3 py-1.5 border border-border rounded-[8px] text-xs font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
+              >
+                ↓ Download
+              </button>
             </div>
-          </KitPanel>
+            <KitPanel title="Cover letter">
+              <div className="space-y-4">
+                {kit.cover_letter.split(/\n\n+/).filter(Boolean).map((para, i) => (
+                  <p key={i} className="text-sm font-dm-sans text-text-primary leading-relaxed whitespace-pre-line">{para.trim()}</p>
+                ))}
+              </div>
+            </KitPanel>
+          </div>
         )}
 
         {tab === "cv" && kit && (
-          <KitPanel title="Tailored CV">
-            <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap font-dm-sans text-sm text-text-primary leading-relaxed">{kit.tailored_cv}</pre>
+          <div className="space-y-4">
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => copyText(kit.tailored_cv, "cv")}
+                className="px-3 py-1.5 border border-border rounded-[8px] text-xs font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
+              >
+                {copied === "cv" ? "Copied ✓" : "Copy"}
+              </button>
+              <button
+                onClick={() => downloadText(kit.tailored_cv, `CV_${job.company}_${job.role}.txt`)}
+                className="px-3 py-1.5 bg-btn-bg text-btn-text rounded-[8px] text-xs font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
+              >
+                ↓ Download CV
+              </button>
             </div>
-          </KitPanel>
+            <KitPanel title="Tailored CV">
+              <div className="font-dm-sans text-sm text-text-primary leading-relaxed space-y-1">
+                {kit.tailored_cv.split("\n").map((line, i) => {
+                  const trimmed = line.trim();
+                  if (!trimmed) return <div key={i} className="h-3" />;
+                  const isHeader = trimmed === trimmed.toUpperCase() && trimmed.length < 40 && !/\d/.test(trimmed);
+                  return (
+                    <p key={i} className={isHeader ? "font-syne font-bold text-text-primary mt-4 mb-1 border-b border-border pb-1" : "text-text-primary"}>
+                      {line}
+                    </p>
+                  );
+                })}
+              </div>
+            </KitPanel>
+            <p className="text-xs text-text-dimmed font-dm-sans text-center">
+              Paste this into your preferred word processor to apply final formatting before sending.
+            </p>
+          </div>
         )}
 
         {tab === "screening" && kit && (
           <div className="space-y-4">
+            <p className="text-xs text-text-dimmed font-dm-sans">Likely interview screening questions based on the job description and your background. Use these to prepare.</p>
             {kit.screening_answers.map((qa, i) => (
               <KitPanel key={i} title={`Q${i + 1}: ${qa.question}`}>
-                <p className="text-sm font-dm-sans text-text-primary leading-relaxed">{qa.answer}</p>
+                <p className="text-sm font-dm-sans text-text-primary leading-relaxed mb-3">{qa.answer}</p>
+                <button
+                  onClick={() => copyText(qa.answer, `qa-${i}`)}
+                  className="text-xs px-2.5 py-1 border border-border rounded-[6px] font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
+                >
+                  {copied === `qa-${i}` ? "Copied ✓" : "Copy answer"}
+                </button>
               </KitPanel>
             ))}
           </div>

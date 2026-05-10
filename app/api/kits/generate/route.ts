@@ -38,38 +38,47 @@ export async function POST(req: NextRequest) {
     const { data: existingKit } = await supabaseAdmin.from("kits").select("*").eq("job_id", jobId).eq("user_id", userId).single();
     if (existingKit) return NextResponse.json({ kit: existingKit });
 
-    const kitPrompt = `You are an expert job application writer. Generate a complete application kit.
+    const kitPrompt = `You are an expert job application coach. Generate a complete, highly tailored application kit for this candidate and job.
 
-CANDIDATE:
+CANDIDATE PROFILE:
 Name: ${user.name || ""}
-CV: ${(user.cv_text || "").slice(0, 4000)}
-Education: ${user.education || ""}
+Email: ${user.email || ""}
+Phone: ${user.phone || ""}
 LinkedIn: ${user.linkedin || ""}
 Target Role: ${user.target_role || ""}
 Seniority: ${user.seniority || ""}
+Education: ${user.education || ""}
+Work Authorization: ${user.work_authorization || ""}
+CV / Background:
+${(user.cv_text || "No CV provided").slice(0, 4000)}
 
-JOB:
+JOB POSTING:
 Company: ${job.company}
 Role: ${job.role}
 Location: ${job.location}
-Description: ${(job.description || "").slice(0, 2000)}
+Description:
+${(job.description || "No description available").slice(0, 2500)}
 
-Return ONLY valid JSON, no other text:
+Generate ONLY a valid JSON object with these exact keys:
+
 {
-  "coverLetter": "<full personalized cover letter, 4-5 paragraphs>",
-  "tailoredCv": "<full CV rewritten with ATS keywords from job description, proper formatting>",
+  "coverLetter": "<A professional cover letter, 4-5 paragraphs. Opening paragraph: enthusiastic hook mentioning the specific role and company. Second paragraph: why you are uniquely qualified referencing 2-3 specific requirements from the job description and your matching experience. Third paragraph: a specific achievement or project from your background that directly relates to this role. Fourth paragraph: cultural fit and genuine interest in the company. Closing: call to action and thank you. Do NOT include [Candidate Name] or address headers — start directly with the salutation like 'Dear Hiring Manager,'>",
+  "tailoredCv": "<Full CV rewritten to highlight experience most relevant to this role. Structure: PROFESSIONAL SUMMARY (3-4 lines mirroring language from the job description) | WORK EXPERIENCE (reordered/reworded to lead with most relevant experience, strong action verbs, quantify achievements) | EDUCATION | SKILLS (keywords directly from the job description that the candidate has). Use plain text, ALL CAPS for section headers, no special characters>",
   "screeningAnswers": [
-    { "question": "<likely screening question>", "answer": "<tailored answer>" }
+    { "question": "<specific likely screening question for this exact role at this company>", "answer": "<tailored answer in STAR format where applicable, referencing the candidate's actual background, 3-5 sentences>" },
+    { "question": "...", "answer": "..." }
   ],
   "skillsGap": [
-    { "skill": "<missing skill>", "tip": "<how to address it>" }
+    { "skill": "<skill mentioned in job description that candidate lacks or could strengthen>", "tip": "<specific actionable tip to address this gap, e.g. a certification, project, or talking point>" }
   ],
-  "overallVerdict": "<strong/moderate/weak match and one sentence why>"
-}`;
+  "overallVerdict": "<One sentence: strong/moderate/weak match and the single most important reason>"
+}
+
+Generate 6-8 screening questions. Focus on questions actually asked for this type of role (behavioral, technical, situational).`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 4000,
+      max_tokens: 6000,
       messages: [{ role: "user", content: kitPrompt }],
     });
 
