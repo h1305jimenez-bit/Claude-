@@ -244,7 +244,7 @@ export default function KitPage() {
 
             <div className="flex gap-2">
               <a
-                href={job.url}
+                href={`/api/jobs/go?url=${encodeURIComponent(job.url)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
@@ -252,7 +252,7 @@ export default function KitPage() {
                 View job posting ↗
               </a>
               <a
-                href={job.url}
+                href={`/api/jobs/go?url=${encodeURIComponent(job.url)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
