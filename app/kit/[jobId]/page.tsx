@@ -301,47 +301,52 @@ export default function KitPage() {
               </KitPanel>
             )}
 
-            {/* Apply CTA */}
-            <div className="border border-border rounded-[8px] bg-surface overflow-hidden">
-              {resolving ? (
-                <div className="flex items-center gap-3 px-5 py-4">
-                  <Spinner size="sm" />
-                  <p className="text-sm font-dm-sans text-text-dimmed">Finding career page…</p>
-                </div>
-              ) : careerUrl ? (
-                <div className="flex items-center justify-between gap-4 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="text-xs text-text-dimmed font-dm-sans mb-0.5">Career page found</p>
-                    <p className="text-sm font-dm-sans text-text-primary truncate">
-                      {(() => { try { return new URL(careerUrl).hostname.replace(/^www\./, ""); } catch { return careerUrl; } })()}
-                    </p>
+            {/* Apply CTA — routes through /api/jobs/go which smart-resolves and redirects */}
+            {(() => {
+              const goUrl = `/api/jobs/go?${new URLSearchParams({
+                url: job.url ?? "",
+                company: job.company,
+                role: job.role,
+                location: job.location ?? "",
+              })}`;
+              const applyHref = careerUrl ?? goUrl;
+              const domainLabel = careerUrl
+                ? (() => { try { return new URL(careerUrl).hostname.replace(/^www\./, ""); } catch { return null; } })()
+                : null;
+
+              return (
+                <div className="border border-border rounded-[8px] bg-surface overflow-hidden">
+                  <div className="flex items-center justify-between gap-4 px-5 py-4">
+                    <div className="min-w-0">
+                      {resolving ? (
+                        <div className="flex items-center gap-2">
+                          <Spinner size="sm" />
+                          <p className="text-sm font-dm-sans text-text-dimmed">Finding career page…</p>
+                        </div>
+                      ) : domainLabel ? (
+                        <>
+                          <p className="text-xs text-text-dimmed font-dm-sans mb-0.5">Career page</p>
+                          <p className="text-sm font-dm-sans text-text-primary truncate">{domainLabel}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-text-dimmed font-dm-sans mb-0.5">Apply to {job.company}</p>
+                          <p className="text-xs text-text-dimmed font-dm-sans">We&apos;ll find the career page and take you there</p>
+                        </>
+                      )}
+                    </div>
+                    <a
+                      href={applyHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 px-5 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] font-medium"
+                    >
+                      Apply ↗
+                    </a>
                   </div>
-                  <a
-                    href={careerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 px-5 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] font-medium"
-                  >
-                    Apply ↗
-                  </a>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between gap-4 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="text-xs text-text-dimmed font-dm-sans mb-0.5">Search Google for the career page</p>
-                    <p className="text-sm font-dm-sans text-text-primary truncate">{searchQuery}</p>
-                  </div>
-                  <a
-                    href={googleUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 px-5 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] font-medium"
-                  >
-                    Search Google ↗
-                  </a>
-                </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         )}
 

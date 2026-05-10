@@ -61,17 +61,11 @@ function isAggregator(url: string): boolean {
   return AGGREGATORS.some(a => url.includes(a));
 }
 
-// Search DuckDuckGo HTML for the first direct career/company URL, skipping aggregators.
-// This runs server-side so no API key is needed.
-async function searchCareerUrl(company: string, role: string, location: string): Promise<string | null> {
-  const city = location.split(",")[0]?.trim() ?? "";
-  const country = location.split(",").pop()?.trim() ?? "";
-  const placePart = city && country && city !== country ? `${city} ${country}` : (country || city);
-  // Exclude aggregators from results so we land on the actual company/ATS page
-  const query = [company, role, placePart, "apply", "-site:linkedin.com", "-site:indeed.com", "-site:glassdoor.com"].filter(Boolean).join(" ");
-
+// Fetch DuckDuckGo HTML results for one query and return the best career URL found.
+// Priority: ATS-domain hit > career URL pattern > any non-aggregator result.
+async function ddgSearch(query: string): Promise<string | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), 6000);
   try {
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
       method: "GET",
@@ -87,29 +81,47 @@ async function searchCareerUrl(company: string, role: string, location: string):
     if (!res.ok) return null;
 
     const html = await res.text();
+    const candidates: string[] = [];
 
-    // DuckDuckGo HTML results encode the real URL as uddg= query param
     for (const m of html.matchAll(/uddg=(https?[^&"'\s]+)/g)) {
       try {
         const href = decodeURIComponent(m[1]);
-        if (!href.startsWith("http")) continue;
-        if (isAggregator(href)) continue;
-        if (isSearchResultsPage(href)) continue;
-        return href;
+        if (href.startsWith("http") && !isAggregator(href) && !isSearchResultsPage(href)) {
+          candidates.push(href);
+        }
       } catch { /* skip malformed */ }
     }
 
-    // Fallback: extract plain hrefs that look like career pages
-    for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
-      const href = m[1];
-      if (isAggregator(href)) continue;
-      if (isSearchResultsPage(href)) continue;
-      if (isCareerUrl(href)) return href;
-    }
-  } catch { /* network failure */ }
+    // Prefer ATS-hosted URLs, then any career-path URL, then first result
+    return candidates.find(u => ATS_DOMAINS.some(d => u.includes(d)))
+      ?? candidates.find(u => isCareerUrl(u))
+      ?? candidates[0]
+      ?? null;
+  } catch { return null; }
   finally { clearTimeout(timer); }
+}
 
-  return null;
+// Run multiple search queries in parallel and pick the best hit.
+async function searchCareerUrl(company: string, role: string, location: string): Promise<string | null> {
+  const city = location.split(",")[0]?.trim() ?? "";
+  const country = location.split(",").pop()?.trim() ?? "";
+  const place = city && country && city !== country ? `${city} ${country}` : (country || city);
+
+  const queries = [
+    // Most specific: quoted company + role so we get the right listing page
+    `"${company}" "${role}" ${place} careers`,
+    // Broader: standard terms plus explicit aggregator exclusions
+    `${company} ${role} ${place} apply -site:linkedin.com -site:indeed.com -site:glassdoor.com`,
+    // Fallback: just the company careers page (ignores role — finds their careers landing page)
+    `${company} careers ${place}`,
+  ].filter(Boolean);
+
+  // Run all queries in parallel; return the first ATS hit, then first career-URL hit, then first result
+  const results = await Promise.all(queries.map(q => ddgSearch(q)));
+  return results.find(r => r && ATS_DOMAINS.some(d => r.includes(d)))
+    ?? results.find(r => r && isCareerUrl(r))
+    ?? results.find(r => r !== null)
+    ?? null;
 }
 
 async function resolveAdzunaUrl(url: string): Promise<string | null> {
