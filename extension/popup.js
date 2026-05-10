@@ -48,6 +48,13 @@ function showStatus(el, msg, type) {
 }
 
 function detectPortal(url) {
+  // Check URL query params first — catches ATS embedded on company career sites
+  try {
+    const u = new URL(url);
+    if (u.searchParams.has("gh_jid") || u.searchParams.has("gh_src")) return { name: "Greenhouse", key: "greenhouse" };
+    if (u.searchParams.has("lever-origin") || u.searchParams.has("lever_source")) return { name: "Lever", key: "lever" };
+  } catch { /* ignore */ }
+
   if (/greenhouse\.io/.test(url)) return { name: "Greenhouse", key: "greenhouse" };
   if (/lever\.co/.test(url)) return { name: "Lever", key: "lever" };
   if (/myworkdayjobs\.com/.test(url)) return { name: "Workday", key: "workday" };
@@ -65,7 +72,7 @@ function detectPortal(url) {
   if (/metacareers\.com/.test(url)) return { name: "Meta Careers", key: "meta" };
   if (/pinpointhq\.com/.test(url)) return { name: "Pinpoint", key: "pinpoint" };
   if (/rippling\.com/.test(url)) return { name: "Rippling", key: "rippling" };
-  return { name: "Unknown portal", key: null };
+  return { name: "Unknown portal", key: "default" };
 }
 
 function buildFieldsPreview(profile) {
@@ -75,6 +82,9 @@ function buildFieldsPreview(profile) {
     ["Email", profile.email],
     ["Phone", profile.phone],
     ["LinkedIn", profile.linkedin],
+    ["Location", profile.target_location],
+    ["Work auth.", profile.work_authorization],
+    ["Seniority", profile.seniority],
   ].filter(([, v]) => v);
 }
 
@@ -126,8 +136,9 @@ async function init() {
     const portal = detectPortal(tab?.url ?? "");
     document.getElementById("portalName").textContent = portal.name;
     const pb = document.getElementById("portalBadge");
-    pb.textContent = portal.key ? "Ready to fill" : "Open a job application page";
-    if (portal.key) pb.className = "portal-badge detected";
+    const isDefault = portal.key === "default";
+    pb.textContent = isDefault ? "Generic fill (portal not detected)" : "Ready to fill";
+    if (!isDefault) pb.className = "portal-badge detected";
 
     // Fields preview
     const fields = buildFieldsPreview(user);
@@ -140,14 +151,9 @@ async function init() {
     }
 
     const fillBtn = document.getElementById("fillBtn");
-    if (portal.key) {
-      fillBtn.textContent = `Fill ${portal.name} form`;
-      fillBtn.disabled = false;
-      fillBtn.onclick = () => triggerFill(tab, user, portal.key);
-    } else {
-      fillBtn.textContent = "Navigate to a job application";
-      fillBtn.disabled = true;
-    }
+    fillBtn.textContent = isDefault ? "Fill form (generic)" : `Fill ${portal.name} form`;
+    fillBtn.disabled = false;
+    fillBtn.onclick = () => triggerFill(tab, user, portal.key);
 
   } catch {
     await clearStored();
@@ -190,13 +196,33 @@ function fillForm(portalKey, user) {
   const lastName = user.name?.split(" ").slice(1).join(" ") ?? "";
   const fullName = `${firstName} ${lastName}`.trim();
 
+  // DOM-based portal detection fallback (runs inside the page)
+  if (portalKey === "default" || !portalKey) {
+    if (document.querySelector('input[name="first_name"], input[id="first_name"]')) portalKey = "greenhouse";
+    else if (document.querySelector('input[name="name"][autocomplete]') && document.querySelector('[class*="lever"], [data-qa*="lever"]')) portalKey = "lever";
+    else if (document.querySelector('[data-automation-id*="firstName"]')) portalKey = "workday";
+    else if (document.querySelector('input[id*="jv-firstName"]')) portalKey = "jobvite";
+    else if (document.querySelector('input[name="ftFirstName"]')) portalKey = "taleo";
+    else if (document.querySelector('[class*="ashby"], [data-testid*="ashby"]')) portalKey = "ashby";
+    else portalKey = "default";
+  }
+
+  // Common extra fields appended to every portal map
+  const COMMON_EXTRA = [
+    { selectors: ['input[name*="linkedin" i]', 'input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]', 'input[label*="linkedin" i]'], value: user.linkedin },
+    { selectors: ['input[name*="location" i]', 'input[placeholder*="city" i]', 'input[placeholder*="location" i]', 'input[id*="location" i]', 'input[id*="city" i]'], value: user.target_location },
+    { selectors: ['input[name*="work_auth" i]', 'input[placeholder*="authorization" i]', 'input[id*="work_auth" i]'], value: user.work_authorization },
+    { selectors: ['input[name*="portfolio" i]', 'input[placeholder*="portfolio" i]', 'input[name*="website" i]', 'input[placeholder*="website" i]'], value: user.linkedin },
+  ];
+
   const PORTAL_MAPS = {
     greenhouse: [
       { selectors: ['input[id="first_name"]', 'input[name="first_name"]'], value: firstName },
       { selectors: ['input[id="last_name"]', 'input[name="last_name"]'], value: lastName },
       { selectors: ['input[id="email"]', 'input[name="email"]', 'input[type="email"]'], value: user.email },
       { selectors: ['input[id="phone"]', 'input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[id="job_application_answers_attributes_0_text_value"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
+      { selectors: ['input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]'], value: user.linkedin },
+      { selectors: ['input[id="location"]', 'input[name="location"]'], value: user.target_location },
     ],
     lever: [
       { selectors: ['input[name="name"]', 'input[placeholder*="Full name" i]'], value: fullName },
@@ -313,22 +339,37 @@ function fillForm(portalKey, user) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  const fieldMap = PORTAL_MAPS[portalKey] ?? PORTAL_MAPS.default;
-  let filled = 0;
-
-  for (const { selectors, value } of fieldMap) {
-    if (!value) continue;
+  function fillField({ selectors, value }) {
+    if (!value) return false;
     for (const sel of selectors) {
       const el = document.querySelector(sel);
       if (el && !el.value) {
         setNativeValue(el, value);
-        filled++;
-        break;
+        return true;
       }
+    }
+    return false;
+  }
+
+  const fieldMap = [...(PORTAL_MAPS[portalKey] ?? PORTAL_MAPS.default), ...COMMON_EXTRA];
+  let filled = 0;
+
+  for (const entry of fieldMap) {
+    if (fillField(entry)) filled++;
+  }
+
+  // Handle select dropdowns for work authorization
+  if (user.work_authorization) {
+    const selects = document.querySelectorAll('select[name*="auth" i], select[id*="auth" i], select[name*="eligible" i], select[name*="sponsor" i]');
+    for (const sel of selects) {
+      if (sel.value) continue;
+      const opts = Array.from(sel.options);
+      const match = opts.find(o => o.text.toLowerCase().includes("yes") || o.text.toLowerCase().includes("authorized") || o.text.toLowerCase().includes("citizen"));
+      if (match) { sel.value = match.value; sel.dispatchEvent(new Event("change", { bubbles: true })); filled++; }
     }
   }
 
-  return { filled };
+  return { filled, portal: portalKey };
 }
 
 // --- Connect flow ---
