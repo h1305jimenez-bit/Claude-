@@ -60,6 +60,37 @@ export default function TrackerPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const resetTracker = async () => {
+    setResetting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      const token = sessionData.session?.access_token;
+      if (!userId || !token) return;
+      // Move all tracked jobs back to "new" so they reappear in the dashboard inbox
+      await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=in.(open,closing,closed)`,
+        {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({ status: "new" }),
+        }
+      );
+      setJobs([]);
+      setShowResetConfirm(false);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const updateStatus = async (jobId: string, status: string) => {
     setUpdatingId(jobId);
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: status as Job["status"] } : j));
@@ -92,11 +123,42 @@ export default function TrackerPage() {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <main className="ml-56 flex-1 p-8 max-w-5xl">
-        <div className="mb-8">
-          <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">Tracker</h1>
-          <p className="text-text-dimmed text-sm font-dm-sans">
-            Jobs you&apos;ve moved out of New. Update status as you progress.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">Tracker</h1>
+            <p className="text-text-dimmed text-sm font-dm-sans">
+              Jobs you&apos;ve tracked from the Dashboard. Update status as you progress.
+            </p>
+          </div>
+          {jobs.length > 0 && (
+            <div className="shrink-0">
+              {!showResetConfirm ? (
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="text-xs px-3 py-2 border border-border rounded-[8px] text-text-dimmed hover:text-text-primary hover:bg-surface font-dm-sans transition-all duration-[150ms]"
+                >
+                  Reset tracker
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-dimmed font-dm-sans">Move all back to inbox?</span>
+                  <button
+                    onClick={resetTracker}
+                    disabled={resetting}
+                    className="text-xs px-3 py-1.5 bg-btn-bg text-btn-text rounded-[6px] font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-50"
+                  >
+                    {resetting ? "Resetting..." : "Confirm"}
+                  </button>
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="text-xs px-3 py-1.5 border border-border rounded-[6px] text-text-dimmed font-dm-sans hover:bg-surface transition-all duration-[150ms]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats */}
