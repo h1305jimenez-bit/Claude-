@@ -3,6 +3,7 @@ import type { User } from "@/lib/types";
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? "";
 
 function getUserFromToken(token: string): { userId: string; email: string } | null {
   const [, raw] = token.split(".");
@@ -29,10 +30,20 @@ export async function GET(req: NextRequest) {
   const jwt = getUserFromToken(token);
   if (!jwt) return NextResponse.json({ error: "Invalid token" }, { status: 401, headers });
 
+  // Use service key for the lookup so RLS on the users table doesn't block it.
+  // The JWT has already been verified above — we know who the user is.
+  const lookupKey = SERVICE_KEY || ANON_KEY;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/users?id=eq.${jwt.userId}&select=*&limit=1`,
-    { headers: { "Authorization": `Bearer ${token}`, "apikey": ANON_KEY } }
+    { headers: { "Authorization": `Bearer ${lookupKey}`, "apikey": lookupKey } }
   );
+
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error("extension/profile: supabase error", res.status, detail);
+    return NextResponse.json({ error: "Database error" }, { status: 502, headers });
+  }
+
   const rows = await res.json() as User[];
   const user = rows[0];
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404, headers });

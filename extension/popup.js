@@ -58,10 +58,13 @@ async function fetchProfile(token, apiUrl) {
   } catch {
     throw new Error(`Cannot reach ${apiUrl} — is the app open?`);
   }
-  if (res.status === 401 || res.status === 404) {
+  if (res.status === 401) {
     throw new Error("Token rejected. Go to Profile → Copy extension token and paste a fresh one.");
   }
-  if (!res.ok) throw new Error(`Server error (${res.status}). Try again.`);
+  if (res.status === 404) {
+    throw new Error("Account not found. Make sure you are logged into ApplyPilot first.");
+  }
+  if (!res.ok) throw new Error(`Server error (${res.status}). Try again in a moment.`);
   return res.json();
 }
 
