@@ -94,18 +94,21 @@ export async function POST(req: NextRequest) {
     const jobsToScore = adzunaJobs.slice(0, 8);
 
     // Resolve Adzuna tracking URLs to actual company career page URLs.
-    // Strategy: GET+redirect follow first; if still on adzuna.com, scan description for known ATS URLs.
+    // Adzuna's redirect_url lands on their own job detail page; we parse that page's HTML
+    // to find the actual "Apply" link pointing to the company ATS/career page.
     const ATS_DOMAINS = [
       "greenhouse.io", "lever.co", "myworkdayjobs.com", "linkedin.com/jobs",
       "smartrecruiters.com", "bamboohr.com", "workable.com", "icims.com",
       "taleo.net", "successfactors.com", "jobvite.com", "ashbyhq.com",
       "recruitee.com", "jazz.co", "breezy.hr", "applytojob.com",
       "jobscore.com", "pinpointhq.com", "rippling.com/jobs",
+      "amazon.jobs", "careers.google.com", "jobs.apple.com",
+      "careers.microsoft.com", "metacareers.com", "jobs.netflix.com",
     ];
 
-    function extractAtsUrl(description: string): string | null {
-      const urlPattern = /https?:\/\/[^\s"'<>]+/g;
-      const urls = description.match(urlPattern) ?? [];
+    function extractAtsUrl(text: string): string | null {
+      const urlPattern = /https?:\/\/[^\s"'<>)]+/g;
+      const urls = text.match(urlPattern) ?? [];
       for (const u of urls) {
         const clean = u.replace(/[).,;]+$/, "");
         if (ATS_DOMAINS.some(d => clean.includes(d))) return clean;
@@ -115,20 +118,58 @@ export async function POST(req: NextRequest) {
 
     async function resolveUrl(url: string, description?: string): Promise<string> {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
+      const timer = setTimeout(() => controller.abort(), 8000);
       try {
         const res = await fetch(url, {
           method: "GET",
           redirect: "follow",
           signal: controller.signal,
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; ApplyPilot/1.0)" },
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+          },
         });
         clearTimeout(timer);
-        const final = res.url;
-        if (final && !final.includes("adzuna.com") && final !== url) return final;
-      } catch { /* fall through to description extraction */ }
+        const finalUrl = res.url;
+
+        // Redirected cleanly away from Adzuna
+        if (finalUrl && !finalUrl.includes("adzuna.com") && finalUrl !== url) return finalUrl;
+
+        // Still on Adzuna — parse the HTML for the real apply link
+        const html = await res.text();
+
+        // Strategy 1: JSON-LD structured data (most reliable)
+        const jsonLdBlocks = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) ?? [];
+        for (const block of jsonLdBlocks) {
+          try {
+            const inner = block.replace(/<script[^>]*>/i, "").replace(/<\/script>/i, "");
+            const data = JSON.parse(inner) as Record<string, unknown>;
+            const isNonAdzuna = (v: unknown) => typeof v === "string" && !v.includes("adzuna.com");
+            for (const key of ["url", "sameAs", "applyUrl", "applicationUrl"]) {
+              if (isNonAdzuna(data[key])) return data[key] as string;
+            }
+          } catch { /* ignore */ }
+        }
+
+        // Strategy 2: href attributes pointing to known ATS / career domains
+        const hrefRe = /href="(https?:\/\/[^"]+)"/g;
+        let m: RegExpExecArray | null;
+        while ((m = hrefRe.exec(html)) !== null) {
+          const href = m[1];
+          if (ATS_DOMAINS.some(d => href.includes(d))) return href;
+        }
+
+        // Strategy 3: data-url / data-apply-url attributes
+        const dataRe = /data-(?:href|url|apply-?url)="(https?:\/\/[^"]+)"/g;
+        while ((m = dataRe.exec(html)) !== null) {
+          if (!m[1].includes("adzuna.com")) return m[1];
+        }
+
+      } catch { /* fall through */ }
       finally { clearTimeout(timer); }
-      // Fallback: extract a known ATS URL from the job description
+
+      // Last resort: scan the job description text for ATS URLs
       if (description) {
         const atsUrl = extractAtsUrl(description);
         if (atsUrl) return atsUrl;
@@ -279,7 +320,7 @@ JSON format:
       success: true,
       count: scoredJobs.length,
       remaining: remaining - 1,
-      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody },
+      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map(j => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
