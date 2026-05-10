@@ -207,130 +207,6 @@ function fillForm(portalKey, user) {
     else portalKey = "default";
   }
 
-  // Common extra fields appended to every portal map
-  const COMMON_EXTRA = [
-    { selectors: ['input[name*="linkedin" i]', 'input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]', 'input[label*="linkedin" i]'], value: user.linkedin },
-    { selectors: ['input[name*="location" i]', 'input[placeholder*="city" i]', 'input[placeholder*="location" i]', 'input[id*="location" i]', 'input[id*="city" i]'], value: user.target_location },
-    { selectors: ['input[name*="work_auth" i]', 'input[placeholder*="authorization" i]', 'input[id*="work_auth" i]'], value: user.work_authorization },
-    { selectors: ['input[name*="portfolio" i]', 'input[placeholder*="portfolio" i]', 'input[name*="website" i]', 'input[placeholder*="website" i]'], value: user.linkedin },
-  ];
-
-  const PORTAL_MAPS = {
-    greenhouse: [
-      { selectors: ['input[id="first_name"]', 'input[name="first_name"]'], value: firstName },
-      { selectors: ['input[id="last_name"]', 'input[name="last_name"]'], value: lastName },
-      { selectors: ['input[id="email"]', 'input[name="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[id="phone"]', 'input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]'], value: user.linkedin },
-      { selectors: ['input[id="location"]', 'input[name="location"]'], value: user.target_location },
-    ],
-    lever: [
-      { selectors: ['input[name="name"]', 'input[placeholder*="Full name" i]'], value: fullName },
-      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[name="urls[LinkedIn]"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
-      { selectors: ['input[name="org"]', 'input[placeholder*="company" i]'], value: "" },
-    ],
-    workday: [
-      { selectors: ['input[data-automation-id="legalNameSection_firstName"]', 'input[id*="firstName"]'], value: firstName },
-      { selectors: ['input[data-automation-id="legalNameSection_lastName"]', 'input[id*="lastName"]'], value: lastName },
-      { selectors: ['input[data-automation-id="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[data-automation-id="phone-number"]', 'input[type="tel"]'], value: user.phone },
-    ],
-    linkedin: [
-      { selectors: ['input[id$="-firstName"]', 'input[aria-label*="First name" i]'], value: firstName },
-      { selectors: ['input[id$="-lastName"]', 'input[aria-label*="Last name" i]'], value: lastName },
-      { selectors: ['input[id$="-phoneNumber"]', 'input[aria-label*="Phone" i]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[id$="-email"]', 'input[type="email"]'], value: user.email },
-    ],
-    smartrecruiters: [
-      { selectors: ['input[name="firstName"]', 'input[id="firstName"]'], value: firstName },
-      { selectors: ['input[name="lastName"]', 'input[id="lastName"]'], value: lastName },
-      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[name="phoneNumber"]', 'input[type="tel"]'], value: user.phone },
-    ],
-    bamboohr: [
-      { selectors: ['input[id="firstName"]', 'input[name="firstName"]'], value: firstName },
-      { selectors: ['input[id="lastName"]', 'input[name="lastName"]'], value: lastName },
-      { selectors: ['input[id="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[id="phone"]', 'input[type="tel"]'], value: user.phone },
-    ],
-    workable: [
-      { selectors: ['input[name="firstname"]', 'input[placeholder*="First" i]'], value: firstName },
-      { selectors: ['input[name="lastname"]', 'input[placeholder*="Last" i]'], value: lastName },
-      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[name="linkedin"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
-    ],
-    jobvite: [
-      { selectors: ['input[id="jv-firstName"]', 'input[name="firstName"]'], value: firstName },
-      { selectors: ['input[id="jv-lastName"]', 'input[name="lastName"]'], value: lastName },
-      { selectors: ['input[id="jv-email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[id="jv-phone"]', 'input[type="tel"]'], value: user.phone },
-    ],
-    icims: [
-      { selectors: ['input[name*="firstname" i]', 'input[id*="firstname" i]'], value: firstName },
-      { selectors: ['input[name*="lastname" i]', 'input[id*="lastname" i]'], value: lastName },
-      { selectors: ['input[type="email"]', 'input[name*="email" i]'], value: user.email },
-      { selectors: ['input[type="tel"]', 'input[name*="phone" i]'], value: user.phone },
-    ],
-    ashby: [
-      { selectors: ['input[name="name"]', 'input[placeholder*="Full name" i]'], value: fullName },
-      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-      { selectors: ['input[name="linkedin"]', 'input[placeholder*="linkedin" i]'], value: user.linkedin },
-      { selectors: ['input[name="location"]', 'input[placeholder*="location" i]'], value: user.target_location },
-    ],
-    taleo: [
-      { selectors: ['input[name="ftFirstName"]', 'input[id*="firstName"]'], value: firstName },
-      { selectors: ['input[name="ftLastName"]', 'input[id*="lastName"]'], value: lastName },
-      { selectors: ['input[name="ftEmail"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[name="ftPhone"]', 'input[type="tel"]'], value: user.phone },
-    ],
-    recruitee: [
-      { selectors: ['input[name="first_name"]', 'input[id*="first_name"]'], value: firstName },
-      { selectors: ['input[name="last_name"]', 'input[id*="last_name"]'], value: lastName },
-      { selectors: ['input[type="email"]', 'input[name="email"]'], value: user.email },
-      { selectors: ['input[type="tel"]', 'input[name="phone"]'], value: user.phone },
-    ],
-    breezy: [
-      { selectors: ['input[name="name"]', 'input[placeholder*="name" i]'], value: fullName },
-      { selectors: ['input[name="email"]', 'input[type="email"]'], value: user.email },
-      { selectors: ['input[name="phone"]', 'input[type="tel"]'], value: user.phone },
-    ],
-    amazon: [
-      { selectors: ['input[name="firstName"]', 'input[id*="firstName"]'], value: firstName },
-      { selectors: ['input[name="lastName"]', 'input[id*="lastName"]'], value: lastName },
-      { selectors: ['input[type="email"]', 'input[name="email"]'], value: user.email },
-      { selectors: ['input[type="tel"]', 'input[name="phone"]'], value: user.phone },
-    ],
-    meta: [
-      { selectors: ['input[name="first_name"]', 'input[placeholder*="First" i]'], value: firstName },
-      { selectors: ['input[name="last_name"]', 'input[placeholder*="Last" i]'], value: lastName },
-      { selectors: ['input[type="email"]', 'input[name*="email" i]'], value: user.email },
-      { selectors: ['input[type="tel"]', 'input[name*="phone" i]'], value: user.phone },
-    ],
-    pinpoint: [
-      { selectors: ['input[name="first_name"]', 'input[id*="first_name"]'], value: firstName },
-      { selectors: ['input[name="last_name"]', 'input[id*="last_name"]'], value: lastName },
-      { selectors: ['input[type="email"]'], value: user.email },
-      { selectors: ['input[type="tel"]'], value: user.phone },
-    ],
-    rippling: [
-      { selectors: ['input[name="firstName"]', 'input[placeholder*="First" i]'], value: firstName },
-      { selectors: ['input[name="lastName"]', 'input[placeholder*="Last" i]'], value: lastName },
-      { selectors: ['input[type="email"]'], value: user.email },
-      { selectors: ['input[type="tel"]'], value: user.phone },
-    ],
-    default: [
-      { selectors: ['input[name*="first" i][type="text"]', 'input[id*="first" i][type="text"]', 'input[placeholder*="First name" i]'], value: firstName },
-      { selectors: ['input[name*="last" i][type="text"]', 'input[id*="last" i][type="text"]', 'input[placeholder*="Last name" i]'], value: lastName },
-      { selectors: ['input[type="email"]', 'input[name*="email" i]'], value: user.email },
-      { selectors: ['input[type="tel"]', 'input[name*="phone" i]', 'input[id*="phone" i]'], value: user.phone },
-      { selectors: ['input[name*="linkedin" i]', 'input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]'], value: user.linkedin },
-    ],
-  };
-
   function setNativeValue(el, value) {
     const proto = el.tagName === "TEXTAREA" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
@@ -339,32 +215,156 @@ function fillForm(portalKey, user) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function fillField({ selectors, value }) {
+  // Find input whose label contains any keyword
+  function findByLabel(keywords) {
+    const kw = keywords.map(k => k.toLowerCase());
+    for (const label of document.querySelectorAll("label")) {
+      const text = label.textContent.toLowerCase().trim();
+      if (!kw.some(k => text.includes(k))) continue;
+      const forId = label.getAttribute("for");
+      if (forId) {
+        const el = document.getElementById(forId);
+        if (el && !el.disabled && el.type !== "hidden" && el.type !== "file" && el.type !== "checkbox") return el;
+      }
+      const inner = label.querySelector("input:not([type=hidden]):not([type=file]):not([type=checkbox]), textarea");
+      if (inner && !inner.disabled) return inner;
+      let sib = label.nextElementSibling;
+      for (let i = 0; i < 3 && sib; i++, sib = sib.nextElementSibling) {
+        if (sib.tagName === "LABEL") break;
+        const inp = sib.matches("input, textarea") ? sib
+          : sib.querySelector("input:not([type=hidden]):not([type=file]):not([type=checkbox]), textarea");
+        if (inp && !inp.disabled) return inp;
+      }
+    }
+    return null;
+  }
+
+  function trySelectors(selectors, value) {
     if (!value) return false;
     for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      if (el && !el.value) {
-        setNativeValue(el, value);
-        return true;
-      }
+      try {
+        const el = document.querySelector(sel);
+        if (el && !el.disabled && el.type !== "hidden") { setNativeValue(el, value); return true; }
+      } catch { /* bad selector */ }
     }
     return false;
   }
 
-  const fieldMap = [...(PORTAL_MAPS[portalKey] ?? PORTAL_MAPS.default), ...COMMON_EXTRA];
   let filled = 0;
 
-  for (const entry of fieldMap) {
-    if (fillField(entry)) filled++;
+  // 1. Portal-specific selectors for contact fields
+  const PORTAL_BASICS = {
+    greenhouse: [
+      { s: ['input[id="first_name"]', 'input[name="first_name"]'], v: firstName },
+      { s: ['input[id="last_name"]', 'input[name="last_name"]'], v: lastName },
+      { s: ['input[id="email"]', 'input[name="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[id="phone"]', 'input[name="phone"]', 'input[type="tel"]'], v: user.phone },
+      { s: ['input[id="location"]', 'input[name="location"]'], v: user.target_location },
+    ],
+    lever: [
+      { s: ['input[name="name"]'], v: fullName },
+      { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[name="phone"]', 'input[type="tel"]'], v: user.phone },
+      { s: ['input[name="urls[LinkedIn]"]'], v: user.linkedin },
+    ],
+    workday: [
+      { s: ['input[data-automation-id="legalNameSection_firstName"]'], v: firstName },
+      { s: ['input[data-automation-id="legalNameSection_lastName"]'], v: lastName },
+      { s: ['input[data-automation-id="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[data-automation-id="phone-number"]', 'input[type="tel"]'], v: user.phone },
+    ],
+    smartrecruiters: [
+      { s: ['input[name="firstName"]', 'input[id="firstName"]'], v: firstName },
+      { s: ['input[name="lastName"]', 'input[id="lastName"]'], v: lastName },
+      { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[name="phoneNumber"]', 'input[type="tel"]'], v: user.phone },
+    ],
+    bamboohr: [
+      { s: ['input[id="firstName"]'], v: firstName },
+      { s: ['input[id="lastName"]'], v: lastName },
+      { s: ['input[id="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[id="phone"]', 'input[type="tel"]'], v: user.phone },
+    ],
+    workable: [
+      { s: ['input[name="firstname"]'], v: firstName },
+      { s: ['input[name="lastname"]'], v: lastName },
+      { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[name="phone"]', 'input[type="tel"]'], v: user.phone },
+    ],
+    jobvite: [
+      { s: ['input[id="jv-firstName"]'], v: firstName },
+      { s: ['input[id="jv-lastName"]'], v: lastName },
+      { s: ['input[id="jv-email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[id="jv-phone"]', 'input[type="tel"]'], v: user.phone },
+    ],
+    taleo: [
+      { s: ['input[name="ftFirstName"]'], v: firstName },
+      { s: ['input[name="ftLastName"]'], v: lastName },
+      { s: ['input[name="ftEmail"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[name="ftPhone"]', 'input[type="tel"]'], v: user.phone },
+    ],
+    ashby: [
+      { s: ['input[name="name"]'], v: fullName },
+      { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
+      { s: ['input[name="phone"]', 'input[type="tel"]'], v: user.phone },
+      { s: ['input[name="linkedin"]'], v: user.linkedin },
+      { s: ['input[name="location"]'], v: user.target_location },
+    ],
+    default: [
+      { s: ['input[name*="first" i][type="text"]', 'input[id*="first" i][type="text"]', 'input[placeholder*="First name" i]'], v: firstName },
+      { s: ['input[name*="last" i][type="text"]', 'input[id*="last" i][type="text"]', 'input[placeholder*="Last name" i]'], v: lastName },
+      { s: ['input[type="email"]', 'input[name*="email" i]'], v: user.email },
+      { s: ['input[type="tel"]', 'input[name*="phone" i]'], v: user.phone },
+    ],
+  };
+
+  for (const { s, v } of (PORTAL_BASICS[portalKey] ?? PORTAL_BASICS.default)) {
+    if (trySelectors(s, v)) filled++;
   }
 
-  // Handle select dropdowns for work authorization
-  if (user.work_authorization) {
-    const selects = document.querySelectorAll('select[name*="auth" i], select[id*="auth" i], select[name*="eligible" i], select[name*="sponsor" i]');
-    for (const sel of selects) {
-      if (sel.value) continue;
-      const opts = Array.from(sel.options);
-      const match = opts.find(o => o.text.toLowerCase().includes("yes") || o.text.toLowerCase().includes("authorized") || o.text.toLowerCase().includes("citizen"));
+  // 2. Label-based fills — catches custom questions on any portal
+  const LABEL_FILLS = [
+    { kw: ["first name", "given name", "prénom", "nombre"], v: firstName },
+    { kw: ["last name", "family name", "surname", "apellido"], v: lastName },
+    { kw: ["full name", "your name", "nombre completo"], v: fullName },
+    { kw: ["email", "e-mail", "correo"], v: user.email },
+    { kw: ["phone", "mobile", "telephone", "téléphone", "teléfono"], v: user.phone },
+    { kw: ["linkedin"], v: user.linkedin },
+    { kw: ["location", "city", "where are you", "ciudad", "ubicación", "ville"], v: user.target_location },
+    { kw: ["work authoriz", "work permit", "eligible to work", "right to work"], v: user.work_authorization },
+    { kw: ["website", "portfolio", "personal site"], v: user.linkedin },
+    { kw: ["education", "school", "university", "degree"], v: user.education },
+  ];
+
+  for (const { kw, v } of LABEL_FILLS) {
+    if (!v) continue;
+    const el = findByLabel(kw);
+    if (el && !el.value) { setNativeValue(el, v); filled++; }
+  }
+
+  // 3. Selector-based fallback for fields label detection may miss
+  const EXTRA = [
+    { s: ['input[name*="linkedin" i]', 'input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]'], v: user.linkedin },
+    { s: ['input[id^="job_application_answers_attributes_"][id$="_text_value"]'], v: user.linkedin },
+    { s: ['input[name*="location" i]', 'input[placeholder*="city" i]'], v: user.target_location },
+  ];
+  for (const { s, v } of EXTRA) {
+    if (trySelectors(s, v)) filled++;
+  }
+
+  // 4. Select/dropdown handling
+  for (const sel of document.querySelectorAll("select")) {
+    if (sel.value) continue;
+    const label = document.querySelector(`label[for="${sel.id}"]`);
+    const labelText = (label?.textContent ?? sel.name ?? sel.id ?? "").toLowerCase();
+    const opts = Array.from(sel.options);
+
+    if (user.work_authorization && (labelText.includes("auth") || labelText.includes("eligible") || labelText.includes("sponsor") || labelText.includes("visa") || labelText.includes("legally"))) {
+      const match = opts.find(o => /yes|authorized|citizen|permit/i.test(o.text));
+      if (match) { sel.value = match.value; sel.dispatchEvent(new Event("change", { bubbles: true })); filled++; }
+    }
+    if (user.seniority && (labelText.includes("senior") || labelText.includes("level") || labelText.includes("years of exp"))) {
+      const match = opts.find(o => o.text.toLowerCase().includes(user.seniority.toLowerCase()));
       if (match) { sel.value = match.value; sel.dispatchEvent(new Event("change", { bubbles: true })); filled++; }
     }
   }
