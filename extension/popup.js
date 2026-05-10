@@ -12,6 +12,21 @@ async function clearStored() {
   return new Promise(resolve => chrome.storage.local.remove(["ap_token", "ap_api", "ap_user"], resolve));
 }
 
+// Only clear the token, keep the API URL so reconnection doesn't need to re-detect
+async function clearToken() {
+  return new Promise(resolve => chrome.storage.local.remove(["ap_token"], resolve));
+}
+
+// Decode JWT expiry — returns true if the token is expired
+function isTokenExpired(token) {
+  try {
+    const [, raw] = token.split(".");
+    const padded = raw + "=".repeat((4 - raw.length % 4) % 4);
+    const payload = JSON.parse(atob(padded.replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.exp && payload.exp < Math.floor(Date.now() / 1000);
+  } catch { return false; }
+}
+
 // Auto-detect API URL: check stored value first, then scan open tabs for the app
 async function resolveApiUrl() {
   const { ap_api } = await getStored(["ap_api"]);
@@ -35,10 +50,18 @@ async function resolveApiUrl() {
 }
 
 async function fetchProfile(token, apiUrl) {
-  const res = await fetch(`${apiUrl}/api/extension/profile`, {
-    headers: { "x-access-token": token },
-  });
-  if (!res.ok) throw new Error("Invalid token or session expired");
+  let res;
+  try {
+    res = await fetch(`${apiUrl}/api/extension/profile`, {
+      headers: { "x-access-token": token },
+    });
+  } catch {
+    throw new Error(`Cannot reach ${apiUrl} — is the app open?`);
+  }
+  if (res.status === 401 || res.status === 404) {
+    throw new Error("Token rejected. Go to Profile → Copy extension token and paste a fresh one.");
+  }
+  if (!res.ok) throw new Error(`Server error (${res.status}). Try again.`);
   return res.json();
 }
 
@@ -196,6 +219,18 @@ async function init() {
     return;
   }
 
+  // Detect expired token before hitting the server
+  if (isTokenExpired(token)) {
+    await clearToken();
+    setupView.style.display = "block";
+    connectedView.style.display = "none";
+    if (apiUrl) { apiInput.value = apiUrl; apiRow.style.display = "none"; }
+    else { apiRow.style.display = "block"; }
+    showStatus(document.getElementById("setupStatus"),
+      "Session expired. Go to Profile → Copy extension token, then paste a new one here.", "error");
+    return;
+  }
+
   if (!apiUrl) {
     setupView.style.display = "block";
     connectedView.style.display = "none";
@@ -258,11 +293,14 @@ async function init() {
       dlBtn.onclick = () => chrome.tabs.create({ url: user.cv_url });
     }
 
-  } catch {
-    await clearStored();
+  } catch (e) {
+    await clearToken();
     setupView.style.display = "block";
     connectedView.style.display = "none";
-    showStatus(document.getElementById("setupStatus"), "Session expired — please reconnect.", "error");
+    if (apiUrl) { apiInput.value = apiUrl; apiRow.style.display = "none"; }
+    else { apiRow.style.display = "block"; }
+    showStatus(document.getElementById("setupStatus"),
+      (e instanceof Error ? e.message : "Connection failed") + " Go to Profile → Copy extension token.", "error");
   }
 }
 
@@ -521,6 +559,11 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
   if (!apiUrl) apiUrl = await resolveApiUrl() ?? "";
   if (!apiUrl) { showStatus(status, "Enter your ApplyPilot app URL (e.g. https://yourapp.vercel.app).", "error"); return; }
 
+  if (isTokenExpired(token)) {
+    showStatus(status, "That token has already expired. Go to Profile → Copy extension token for a fresh one.", "error");
+    return;
+  }
+
   try {
     showStatus(status, "Verifying...", "info");
     const data = await fetchProfile(token, apiUrl);
@@ -529,7 +572,7 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
     showStatus(status, "Connected! Reloading...", "success");
     setTimeout(() => init(), 800);
   } catch (e) {
-    showStatus(status, e.message ?? "Connection failed", "error");
+    showStatus(status, e instanceof Error ? e.message : "Connection failed", "error");
   }
 });
 
