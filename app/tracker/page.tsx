@@ -94,30 +94,28 @@ export default function TrackerPage() {
   const updateStatus = async (jobId: string, status: string) => {
     setUpdatingId(jobId);
     const now = new Date().toISOString();
-    const token = (await supabase.auth.getSession()).data.session?.access_token;
-    const headers = {
-      "Authorization": `Bearer ${token}`,
-      "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-      "Content-Type": "application/json",
-      "Prefer": "return=minimal",
-    };
-    const endpoint = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}`;
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) { setUpdatingId(null); return; }
+
+    // Optimistic UI update
     setJobs(prev => prev.map(j => j.id === jobId
       ? { ...j, status: status as Job["status"], closed_date: status === "closed" ? now : null }
       : j
     ));
 
-    // Try with closed_date first; fall back to status-only if column doesn't exist yet
-    const patch: Record<string, string | null> = { status };
-    if (status === "closed") patch.closed_date = now;
-    else patch.closed_date = null;
+    // Try updating with closed_date; fall back to status-only if column doesn't exist yet
+    const { error } = await supabase
+      .from("jobs")
+      .update({ status, ...(status === "closed" ? { closed_date: now } : {}) })
+      .eq("id", jobId)
+      .eq("user_id", userId);
 
-    let res = await fetch(endpoint, { method: "PATCH", headers, body: JSON.stringify(patch) });
-    if (!res.ok) {
-      // Retry with just status (closed_date column may not exist in DB yet)
-      res = await fetch(endpoint, { method: "PATCH", headers, body: JSON.stringify({ status }) });
+    if (error) {
+      await supabase.from("jobs").update({ status }).eq("id", jobId).eq("user_id", userId);
     }
+
     setUpdatingId(null);
   };
 
