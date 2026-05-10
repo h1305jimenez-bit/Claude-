@@ -2,188 +2,210 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
-import { TrackerTable } from "@/components/TrackerTable";
-import type { Application } from "@/lib/types";
+import type { Job } from "@/lib/types";
 
-interface FollowUpResult {
-  subject: string;
-  body: string;
+const PIPELINE_STATUSES = ["open", "closing", "closed"] as const;
+type PipelineStatus = (typeof PIPELINE_STATUSES)[number];
+
+const STATUS_LABELS: Record<string, string> = {
+  open: "In review",
+  closing: "Closing soon",
+  closed: "Applied / Done",
+  new: "New",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  open: "border-blue-300 text-blue-700 bg-blue-50",
+  closing: "border-yellow-400 text-yellow-700 bg-yellow-50",
+  closed: "border-green-400 text-green-700 bg-green-50",
+  new: "border-border text-text-dimmed",
+};
+
+function daysAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "1d ago";
+  return `${days}d ago`;
 }
 
 export default function TrackerPage() {
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [followUp, setFollowUp] = useState<FollowUpResult | null>(null);
-  const [followUpLoading, setFollowUpLoading] = useState(false);
-  const [followUpAppId, setFollowUpAppId] = useState<string>("");
-  const [staleApps, setStaleApps] = useState<Application[]>([]);
-
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const supabase = createBrowserSupabase();
+  const router = useRouter();
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
-      if (!userId) return;
+      if (!userId) { router.push("/auth"); return; }
 
-      const { data: apps } = await supabase
-        .from("applications")
+      const { data } = await supabase
+        .from("jobs")
         .select("*")
         .eq("user_id", userId)
-        .order("applied_date", { ascending: false });
+        .in("status", ["open", "closing", "closed"])
+        .order("score", { ascending: false });
 
-      if (apps) {
-        setApplications(apps as Application[]);
-
-        // Find stale applications (applied > 7 days ago, status still 'applied')
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const stale = (apps as Application[]).filter(
-          (a) => a.application_status === "applied" && new Date(a.applied_date) < sevenDaysAgo
-        );
-        setStaleApps(stale);
-      }
-
-      // Trigger status check in background
-      fetch("/api/jobs/check-status", { method: "POST" }).catch(() => {});
+      if (data) setJobs(data as Job[]);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, router]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleStatusUpdate = async (id: string, status: string) => {
-    await fetch("/api/applications/update", {
+  const updateStatus = async (jobId: string, status: string) => {
+    setUpdatingId(jobId);
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: status as Job["status"] } : j));
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, application_status: status }),
+      headers: {
+        "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify({ status }),
     });
-    setApplications((apps) =>
-      apps.map((a) => a.id === id ? { ...a, application_status: status as Application["application_status"] } : a)
-    );
+    setUpdatingId(null);
   };
 
-  const handleGenerateFollowUp = async (applicationId: string) => {
-    setFollowUpLoading(true);
-    setFollowUpAppId(applicationId);
-    setFollowUp(null);
-    try {
-      const res = await fetch("/api/applications/follow-up", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId }),
-      });
-      const data = await res.json() as FollowUpResult;
-      setFollowUp(data);
-    } finally {
-      setFollowUpLoading(false);
-    }
-  };
+  const applied = jobs.filter(j => j.status === "closed").length;
+  const inReview = jobs.filter(j => j.status === "open" || j.status === "closing").length;
+  const avgScore = jobs.length
+    ? Math.round(jobs.reduce((s, j) => s + j.score, 0) / jobs.length)
+    : 0;
 
-  const statusCounts = {
-    applied: applications.filter((a) => a.application_status === "applied").length,
-    interviewing: applications.filter((a) => a.application_status === "interviewing").length,
-    offer: applications.filter((a) => a.application_status === "offer").length,
-    rejected: applications.filter((a) => a.application_status === "rejected").length,
+  const grouped: Record<PipelineStatus, Job[]> = {
+    open: jobs.filter(j => j.status === "open"),
+    closing: jobs.filter(j => j.status === "closing"),
+    closed: jobs.filter(j => j.status === "closed"),
   };
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="ml-56 flex-1 p-8">
+      <main className="ml-56 flex-1 p-8 max-w-5xl">
         <div className="mb-8">
-          <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">Application Tracker</h1>
-          <p className="text-text-dimmed text-sm font-dm-sans">Track every application and follow up at the right time.</p>
+          <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">Tracker</h1>
+          <p className="text-text-dimmed text-sm font-dm-sans">
+            Jobs you&apos;ve moved out of New. Update status as you progress.
+          </p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          {Object.entries(statusCounts).map(([status, count]) => (
-            <div key={status} className="border border-border rounded-[8px] p-4 bg-surface">
-              <p className="text-xs text-text-dimmed font-dm-sans capitalize mb-1">{status}</p>
-              <p className="font-syne font-bold text-2xl text-text-primary">{count}</p>
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          {[
+            { label: "In pipeline", value: inReview },
+            { label: "Applied / Done", value: applied },
+            { label: "Avg match score", value: avgScore ? `${avgScore}/100` : "—" },
+          ].map(({ label, value }) => (
+            <div key={label} className="border border-border rounded-[8px] p-4 bg-surface">
+              <p className="text-xs text-text-dimmed font-dm-sans mb-1">{label}</p>
+              <p className="font-syne font-bold text-2xl text-text-primary">{value}</p>
             </div>
           ))}
         </div>
 
-        {/* Stale alert */}
-        {staleApps.length > 0 && (
-          <div className="border border-border rounded-[8px] p-4 bg-surface mb-6">
-            <p className="text-sm font-dm-sans text-text-primary mb-1">
-              <span className="font-medium">{staleApps.length}</span> application{staleApps.length > 1 ? "s" : ""} with no response in 7+ days
-            </p>
-            <p className="text-xs text-text-dimmed font-dm-sans">
-              {staleApps.map((a) => a.company).join(", ")} — consider following up.
-            </p>
-          </div>
-        )}
-
         {loading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-border rounded-[8px] h-12 animate-pulse bg-surface" />
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="border border-border rounded-[8px] h-16 animate-pulse bg-surface" />
             ))}
           </div>
+        ) : jobs.length === 0 ? (
+          <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
+            <p className="text-text-dimmed font-dm-sans text-sm mb-2">No jobs in your pipeline yet.</p>
+            <p className="text-text-dimmed font-dm-sans text-xs">
+              From the Dashboard, click a job card and change its status to move it here.
+            </p>
+          </div>
         ) : (
-          <TrackerTable
-            applications={applications}
-            onUpdate={handleStatusUpdate}
-            onGenerateFollowUp={handleGenerateFollowUp}
-          />
-        )}
-
-        {/* Follow-up modal */}
-        {(followUpLoading || followUp) && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-[8px] w-full max-w-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-syne font-bold text-text-primary">Follow-up email</h2>
-                <button
-                  onClick={() => { setFollowUp(null); setFollowUpAppId(""); }}
-                  className="text-text-dimmed hover:text-text-primary text-xl leading-none transition-all duration-[150ms]"
-                >
-                  ×
-                </button>
-              </div>
-              {followUpLoading ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-surface-secondary rounded w-1/2" />
-                  <div className="h-3 bg-surface-secondary rounded w-full" />
-                  <div className="h-3 bg-surface-secondary rounded w-5/6" />
-                </div>
-              ) : followUp ? (
-                <div className="space-y-3">
-                  <div className="border border-border rounded-[8px] p-3 bg-surface">
-                    <p className="text-xs text-text-dimmed font-dm-sans mb-1">Subject</p>
-                    <p className="text-sm font-dm-sans text-text-primary">{followUp.subject}</p>
+          <div className="space-y-8">
+            {PIPELINE_STATUSES.map(status => {
+              const group = grouped[status];
+              if (!group.length) return null;
+              return (
+                <div key={status}>
+                  <h2 className="font-dm-sans text-xs text-text-dimmed font-medium uppercase tracking-wider mb-3">
+                    {STATUS_LABELS[status]} · {group.length}
+                  </h2>
+                  <div className="border border-border rounded-[8px] overflow-hidden">
+                    <table className="w-full text-sm font-dm-sans">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          {["Company", "Role", "Location", "Score", "Posted", "Status", "Apply"].map(h => (
+                            <th key={h} className="px-4 py-3 text-left text-xs text-text-dimmed font-medium">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.map((job, i) => (
+                          <tr
+                            key={job.id}
+                            className={`border-b border-border last:border-0 hover:bg-surface transition-all duration-[150ms] ${
+                              i % 2 === 0 ? "bg-background" : "bg-surface"
+                            }`}
+                          >
+                            <td className="px-4 py-3 font-medium text-text-primary">{job.company}</td>
+                            <td className="px-4 py-3 text-text-dimmed max-w-[200px]">
+                              <a
+                                href={`/kit/${job.id}`}
+                                className="hover:text-text-primary hover:underline transition-all duration-[150ms]"
+                              >
+                                {job.role}
+                              </a>
+                            </td>
+                            <td className="px-4 py-3 text-text-dimmed text-xs">{job.location || "—"}</td>
+                            <td className="px-4 py-3">
+                              <span className="text-xs px-2 py-0.5 border border-border rounded-full font-dm-sans font-semibold text-text-primary">
+                                {job.score}/100
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-text-dimmed text-xs">{daysAgo(job.posted_date)}</td>
+                            <td className="px-4 py-3">
+                              <select
+                                value={job.status}
+                                disabled={updatingId === job.id}
+                                onChange={e => updateStatus(job.id, e.target.value)}
+                                className="text-xs border border-border rounded-[6px] px-2 py-1 bg-background text-text-primary font-dm-sans focus:outline-none hover:bg-surface transition-all duration-[150ms] disabled:opacity-50"
+                              >
+                                <option value="new">New</option>
+                                <option value="open">In review</option>
+                                <option value="closing">Closing soon</option>
+                                <option value="closed">Applied / Done</option>
+                              </select>
+                            </td>
+                            <td className="px-4 py-3">
+                              {job.url ? (
+                                <a
+                                  href={job.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs px-2 py-1 border border-border rounded-[6px] text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms]"
+                                >
+                                  Apply ↗
+                                </a>
+                              ) : (
+                                <span className="text-xs text-text-dimmed">No link</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="border border-border rounded-[8px] p-3 bg-surface">
-                    <p className="text-xs text-text-dimmed font-dm-sans mb-1">Body</p>
-                    <p className="text-sm font-dm-sans text-text-primary leading-relaxed whitespace-pre-wrap">{followUp.body}</p>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      await fetch("/api/applications/update", {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          id: followUpAppId,
-                          follow_up_sent: true,
-                          follow_up_message: `${followUp.subject}\n\n${followUp.body}`,
-                        }),
-                      });
-                      setFollowUp(null);
-                      setFollowUpAppId("");
-                    }}
-                    className="w-full py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
-                  >
-                    Mark as sent
-                  </button>
                 </div>
-              ) : null}
-            </div>
+              );
+            })}
           </div>
         )}
       </main>

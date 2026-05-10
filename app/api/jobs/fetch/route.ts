@@ -93,13 +93,21 @@ export async function POST(req: NextRequest) {
     const adzunaCount = adzunaJobs.length;
     const jobsToScore = adzunaJobs.slice(0, 8);
 
-    // Resolve Adzuna tracking URLs to actual company career page URLs (parallel, 3s timeout each)
+    // Resolve Adzuna tracking URLs to actual company career page URLs
+    // Uses GET+redirect follow; filters out any URL that stays on adzuna.com
     async function resolveUrl(url: string): Promise<string> {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3000);
+      const timer = setTimeout(() => controller.abort(), 5000);
       try {
-        const res = await fetch(url, { method: "HEAD", redirect: "follow", signal: controller.signal });
-        return res.url && res.url !== url ? res.url : url;
+        const res = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          signal: controller.signal,
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; ApplyPilot/1.0)" },
+        });
+        clearTimeout(timer);
+        const final = res.url;
+        return (final && !final.includes("adzuna.com") && final !== url) ? final : url;
       } catch { return url; }
       finally { clearTimeout(timer); }
     }
@@ -176,20 +184,34 @@ JSON format:
 
     const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
 
-    // Delete stale 'new' jobs — try service key first, fall back to user token
+    // Clear stale 'new' jobs before inserting fresh ones.
+    // Try DELETE with service key first; if that fails (RLS / key not set), fall back to
+    // PATCH status→'stale' using the user token (UPDATE is allowed by the upsert RLS policy).
     let deleteStatus = 0;
     let deleteBody = "";
-    const deleteKey = SERVICE_KEY || accessToken;
-    const deleteRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
-      method: "DELETE",
-      headers: {
-        "Authorization": `Bearer ${deleteKey}`,
-        "apikey": deleteKey === SERVICE_KEY ? SERVICE_KEY : ANON_KEY,
-        "Prefer": "return=minimal",
-      },
-    });
-    deleteStatus = deleteRes.status;
-    if (!deleteRes.ok) deleteBody = await deleteRes.text();
+    if (SERVICE_KEY) {
+      const delRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${SERVICE_KEY}`, "apikey": SERVICE_KEY, "Prefer": "return=minimal" },
+      });
+      deleteStatus = delRes.status;
+      if (!delRes.ok) deleteBody = await delRes.text();
+    }
+    // Fallback: PATCH old 'new' jobs to 'stale' so dashboard ignores them
+    if (!SERVICE_KEY || deleteStatus >= 400) {
+      const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({ status: "stale" }),
+      });
+      deleteStatus = patchRes.status;
+      if (!patchRes.ok) deleteBody = await patchRes.text();
+    }
 
     // Upsert jobs via raw REST (bypasses SDK key issues)
     let upsertStatus = 0;

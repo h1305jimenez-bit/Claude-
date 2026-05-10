@@ -43,7 +43,7 @@ export default function DashboardPage() {
         fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*&limit=1`, {
           headers: { "Authorization": `Bearer ${token}`, "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
         }).then(r => r.json()) as Promise<User[]>,
-        supabase.from("jobs").select("*").eq("user_id", userId).order("score", { ascending: false }),
+        supabase.from("jobs").select("*").eq("user_id", userId).neq("status", "stale").order("score", { ascending: false }),
       ]);
 
       const userData = userRes as User[];
@@ -169,6 +169,7 @@ export default function DashboardPage() {
           .from("jobs")
           .select("*")
           .eq("user_id", userId)
+          .neq("status", "stale")
           .order("score", { ascending: false });
         if (newJobs) setJobs(newJobs as Job[]);
       }
