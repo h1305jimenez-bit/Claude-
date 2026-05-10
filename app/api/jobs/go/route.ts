@@ -26,6 +26,17 @@ function isNonAdzuna(url: string): boolean {
   return url.startsWith("http") && !url.includes("adzuna.com");
 }
 
+// Returns true when a URL is a search-engine results page (not a career page)
+function isSearchResultsPage(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    const serps = ["google.com", "bing.com", "yahoo.com", "duckduckgo.com", "baidu.com", "yandex.com"];
+    if (!serps.some(s => host === s || host.endsWith("." + s))) return false;
+    return u.searchParams.has("q") || u.pathname.startsWith("/search");
+  } catch { return false; }
+}
+
 function isCareerUrl(url: string): boolean {
   if (!isNonAdzuna(url)) return false;
   if (ATS_DOMAINS.some(d => url.includes(d))) return true;
@@ -122,14 +133,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid url" }, { status: 400 });
   }
 
-  // Already a direct non-Adzuna URL — redirect immediately
-  if (!url.includes("adzuna.com")) {
+  // Already a direct career URL — redirect immediately
+  if (!url.includes("adzuna.com") && !isSearchResultsPage(url)) {
     return NextResponse.redirect(url);
   }
 
-  // Try to resolve the Adzuna URL to the company's application page
-  const resolved = await resolveAdzunaUrl(url);
-  if (resolved) return NextResponse.redirect(resolved);
+  // Adzuna URL or a stored search-engine URL — try to resolve to the actual career page
+  const resolveTarget = url.includes("adzuna.com") ? url : null;
+  const resolved = resolveTarget ? await resolveAdzunaUrl(resolveTarget) : null;
+  if (resolved && !isSearchResultsPage(resolved)) return NextResponse.redirect(resolved);
 
   // Final fallback: DuckDuckGo "I'm Feeling Lucky" lands on the first result —
   // usually the exact job posting on the company's ATS or careers page.

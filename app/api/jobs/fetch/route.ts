@@ -130,8 +130,9 @@ export async function POST(req: NextRequest) {
         clearTimeout(timer);
         const finalUrl = res.url;
 
-        // Redirected cleanly away from Adzuna
-        if (finalUrl && !finalUrl.includes("adzuna.com") && finalUrl !== url) return finalUrl;
+        // Redirected cleanly away from Adzuna — reject search engine pages
+        const isSERP = (u: string) => { try { const x = new URL(u); const h = x.hostname.replace(/^www\./, ""); return ["google.com","bing.com","yahoo.com","duckduckgo.com"].some(s => h === s || h.endsWith("."+s)) && (x.searchParams.has("q") || x.pathname.startsWith("/search")); } catch { return false; } };
+        if (finalUrl && !finalUrl.includes("adzuna.com") && !isSERP(finalUrl) && finalUrl !== url) return finalUrl;
 
         // Still on Adzuna — parse the HTML for the real apply link
         const html = await res.text();

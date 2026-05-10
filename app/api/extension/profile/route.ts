@@ -35,22 +35,29 @@ export async function GET(req: NextRequest) {
   const jwt = getUserFromToken(token);
   if (!jwt) return NextResponse.json({ error: "Invalid token" }, { status: 401, headers });
 
-  // Use user's own token for Supabase RLS, fall back to service key
+  // Use service key to bypass RLS; fall back to user's own token
   const authKey = SERVICE_KEY || token;
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/users?id=eq.${jwt.userId}&select=*&limit=1`,
-    { headers: { "Authorization": `Bearer ${authKey}`, "apikey": SERVICE_KEY || ANON_KEY } }
-  );
+  const apiKey = SERVICE_KEY || ANON_KEY;
 
-  if (!res.ok) {
-    const detail = await res.text();
-    console.error("extension/profile supabase error:", res.status, detail);
-    return NextResponse.json({ error: "Database error" }, { status: 502, headers });
+  async function fetchUser(filter: string): Promise<User | null> {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?${filter}&select=*&limit=1`,
+      { headers: { "Authorization": `Bearer ${authKey}`, "apikey": apiKey } }
+    );
+    if (!res.ok) return null;
+    const body = await res.json();
+    const rows = Array.isArray(body) ? body : [];
+    return (rows[0] as User) ?? null;
   }
 
-  const body = await res.json();
-  const rows = Array.isArray(body) ? body : [];
-  const user = rows[0] as User | undefined;
+  // Primary lookup by UUID (the normal path)
+  let user = await fetchUser(`id=eq.${jwt.userId}`);
+
+  // Fallback: some accounts have a mismatched id — try email lookup
+  if (!user && jwt.email) {
+    user = await fetchUser(`email=eq.${encodeURIComponent(jwt.email)}`);
+  }
+
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404, headers });
 
   return NextResponse.json({
