@@ -176,15 +176,20 @@ JSON format:
 
     const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
 
-    // Always delete stale 'new' jobs — use service key so RLS doesn't block the delete
-    await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
+    // Delete stale 'new' jobs — try service key first, fall back to user token
+    let deleteStatus = 0;
+    let deleteBody = "";
+    const deleteKey = SERVICE_KEY || accessToken;
+    const deleteRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?user_id=eq.${userId}&status=eq.new`, {
       method: "DELETE",
       headers: {
-        "Authorization": `Bearer ${SERVICE_KEY}`,
-        "apikey": SERVICE_KEY,
+        "Authorization": `Bearer ${deleteKey}`,
+        "apikey": deleteKey === SERVICE_KEY ? SERVICE_KEY : ANON_KEY,
         "Prefer": "return=minimal",
       },
     });
+    deleteStatus = deleteRes.status;
+    if (!deleteRes.ok) deleteBody = await deleteRes.text();
 
     // Upsert jobs via raw REST (bypasses SDK key issues)
     let upsertStatus = 0;
@@ -228,7 +233,7 @@ JSON format:
       success: true,
       count: scoredJobs.length,
       remaining: remaining - 1,
-      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, upsertStatus, upsertBody },
+      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);

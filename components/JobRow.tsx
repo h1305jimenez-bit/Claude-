@@ -39,10 +39,9 @@ export function JobRow({ job }: JobRowProps) {
             }`}>
               {statusLabel[job.status] ?? job.status}
             </span>
-            <span style={{ fontFamily: "var(--font-syne), sans-serif", fontWeight: 700, fontSize: 14, color: "#0d0d0d" }}>
-              {job.score}
+            <span className="text-xs px-2 py-0.5 border border-border rounded-full font-dm-sans font-semibold text-text-primary">
+              {job.score}/100
             </span>
-            <span style={{ fontSize: 11, color: "#6b6b6b", marginLeft: -4 }}>/ 100 match</span>
           </div>
           <h3 className="font-dm-sans font-medium text-text-primary text-sm truncate">{job.role}</h3>
           <p className="text-text-dimmed text-xs font-dm-sans">{job.company} · {job.location}</p>
