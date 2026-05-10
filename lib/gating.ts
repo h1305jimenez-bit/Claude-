@@ -9,15 +9,18 @@ export const checkPaidAccess = (user: UserPlan): boolean =>
 
 export const checkRefreshLimit = (
   user: UserPlan
-): { allowed: boolean; remaining: number } => {
+): { allowed: boolean; remaining: number; unlimited: boolean } => {
+  if (user.plan === "paid") return { allowed: true, remaining: Infinity, unlimited: true };
+
   const today = new Date().toDateString();
   const resetDate = user.daily_refreshes_reset_at
     ? new Date(user.daily_refreshes_reset_at).toDateString()
     : null;
 
-  if (today !== resetDate) return { allowed: true, remaining: 5 };
+  if (today !== resetDate) return { allowed: true, remaining: 5, unlimited: false };
   return {
     allowed: user.daily_refreshes_used < 5,
     remaining: Math.max(0, 5 - user.daily_refreshes_used),
+    unlimited: false,
   };
 };

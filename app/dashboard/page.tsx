@@ -137,7 +137,7 @@ export default function DashboardPage() {
   };
 
   const triggerRefresh = async (manual = true, tokenOverride?: string) => {
-    if (manual && remaining <= 0) {
+    if (manual && remaining <= 0 && user?.plan !== "paid") {
       setError("Daily refresh limit reached. Try again tomorrow.");
       return;
     }
@@ -241,12 +241,18 @@ export default function DashboardPage() {
           )}
 
           {error && (
-            <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans">
-              {error}
-              <button onClick={fixUserId} className="ml-3 px-2 py-0.5 border border-border rounded text-xs text-text-primary hover:bg-surface-secondary transition-all">
-                Fix account →
-              </button>
-              <button onClick={runDebug} className="ml-2 underline text-xs">diagnose</button>
+            <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans flex items-center justify-between gap-3">
+              <span>{error}</span>
+              {error.includes("failed") || error.includes("error") ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={fixUserId} className="px-2 py-0.5 border border-border rounded text-xs text-text-primary hover:bg-surface-secondary transition-all">
+                    Fix account →
+                  </button>
+                  <button onClick={runDebug} className="underline text-xs">diagnose</button>
+                </div>
+              ) : (
+                <button onClick={() => setError("")} className="text-xs text-text-dimmed hover:text-text-primary">✕</button>
+              )}
             </div>
           )}
 
@@ -260,6 +266,20 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Refresh loading state */}
+          {refreshing && (
+            <div className="border border-border rounded-[8px] p-5 mb-4 bg-surface">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-4 h-4 border-2 border-border border-t-text-primary rounded-full animate-spin shrink-0" />
+                <p className="text-sm font-dm-sans text-text-primary font-medium">Scoring new matches…</p>
+              </div>
+              <div className="w-full h-1 bg-surface-secondary rounded-full overflow-hidden">
+                <div className="h-full bg-text-primary rounded-full animate-pulse" style={{ width: "60%" }} />
+              </div>
+              <p className="text-xs text-text-dimmed font-dm-sans mt-2">Fetching jobs and ranking them against your CV. This takes ~30 seconds.</p>
+            </div>
+          )}
+
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -269,19 +289,15 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          ) : jobs.length === 0 ? (
+          ) : jobs.length === 0 && !refreshing ? (
             <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
-              <p className="font-dm-sans text-text-dimmed text-sm mb-1">
-                {refreshing ? "Fetching jobs..." : "No new matches right now."}
+              <p className="font-dm-sans text-text-dimmed text-sm mb-1">No new matches right now.</p>
+              <p className="font-dm-sans text-text-dimmed text-xs">
+                Hit Refresh to fetch new matches, or check the Tracker for jobs you&apos;re already pursuing.
               </p>
-              {!refreshing && (
-                <p className="font-dm-sans text-text-dimmed text-xs">
-                  Hit Refresh to fetch new matches, or check the Tracker for jobs you&apos;re already pursuing.
-                </p>
-              )}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className={`space-y-2 transition-opacity duration-300 ${refreshing ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
               {jobs.map((job) => (
                 <JobRow key={job.id} job={job} onTrack={trackJob} />
               ))}

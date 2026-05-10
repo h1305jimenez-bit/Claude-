@@ -332,30 +332,32 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
       if (!upsertRes.ok) upsertBody = await upsertRes.text();
     }
 
-    // Update refresh counter via raw REST
-    const today = new Date().toDateString();
-    const resetDate = user.daily_refreshes_reset_at
-      ? new Date(user.daily_refreshes_reset_at).toDateString()
-      : null;
-    const refreshPayload = today !== resetDate
-      ? { daily_refreshes_used: 1, daily_refreshes_reset_at: new Date().toISOString() }
-      : { daily_refreshes_used: (user.daily_refreshes_used || 0) + 1 };
+    // Update refresh counter via raw REST (skip for paid — unlimited)
+    if (!checkRefreshLimit(user).unlimited) {
+      const today = new Date().toDateString();
+      const resetDate = user.daily_refreshes_reset_at
+        ? new Date(user.daily_refreshes_reset_at).toDateString()
+        : null;
+      const refreshPayload = today !== resetDate
+        ? { daily_refreshes_used: 1, daily_refreshes_reset_at: new Date().toISOString() }
+        : { daily_refreshes_used: (user.daily_refreshes_used || 0) + 1 };
 
-    await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-      method: "PATCH",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "apikey": ANON_KEY,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal",
-      },
-      body: JSON.stringify(refreshPayload),
-    });
+      await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify(refreshPayload),
+      });
+    }
 
     return NextResponse.json({
       success: true,
       count: scoredJobs.length,
-      remaining: remaining - 1,
+      remaining: remaining === Infinity ? 999 : remaining - 1,
       debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
