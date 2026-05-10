@@ -10,9 +10,20 @@ const ATS_DOMAINS = [
   "careers.microsoft.com", "metacareers.com", "jobs.netflix.com",
   "jobs.lever.co", "boards.greenhouse.io", "apply.workable.com",
   "careers.shopify.com", "stripe.com/jobs", "pinpointhq.com", "rippling.com/jobs",
+  "oraclecloud.com", "fa.oraclecloud.com", "fa.us2.oraclecloud.com",
+  "sap.com/careers", "successfactors.eu", "careers.sap.com",
 ];
 
-// ATS tracking params — catch custom-domain ATS (e.g. careers.feverup.com?gh_jid=...)
+// Job aggregators to skip when picking the first search result
+const AGGREGATORS = [
+  "linkedin.com", "indeed.com", "glassdoor.com", "ziprecruiter.com",
+  "monster.com", "careerjet.com", "simplyhired.com", "snagajob.com",
+  "adzuna.com", "jobsora.com", "jora.com", "expertini.com",
+  "talent.com", "neuvoo.com", "trovit.com", "mitula.com",
+  "jobrapido.com", "bebee.com", "lensa.com", "wellfound.com",
+  "builtinchicago.org", "builtinla.com", "builtinnyc.com",
+];
+
 const ATS_PARAMS = ["gh_jid", "gh_src", "lever-origin", "lever_source", "jid"];
 
 function hasAtsParam(url: string): boolean {
@@ -26,7 +37,6 @@ function isNonAdzuna(url: string): boolean {
   return url.startsWith("http") && !url.includes("adzuna.com");
 }
 
-// Returns true when a URL is a search-engine results page (not a career page)
 function isSearchResultsPage(url: string): boolean {
   try {
     const u = new URL(url);
@@ -41,11 +51,65 @@ function isCareerUrl(url: string): boolean {
   if (!isNonAdzuna(url)) return false;
   if (ATS_DOMAINS.some(d => url.includes(d))) return true;
   if (hasAtsParam(url)) return true;
-  // Heuristic: path contains apply/jobs/careers
   try {
     const path = new URL(url).pathname.toLowerCase();
     return /\/(jobs|careers|apply|job|position|vacancy|opening)/.test(path);
   } catch { return false; }
+}
+
+function isAggregator(url: string): boolean {
+  return AGGREGATORS.some(a => url.includes(a));
+}
+
+// Search DuckDuckGo HTML for the first direct career/company URL, skipping aggregators.
+// This runs server-side so no API key is needed.
+async function searchCareerUrl(company: string, role: string, location: string): Promise<string | null> {
+  const city = location.split(",")[0]?.trim() ?? "";
+  const country = location.split(",").pop()?.trim() ?? "";
+  const placePart = city && country && city !== country ? `${city} ${country}` : (country || city);
+  // Exclude aggregators from results so we land on the actual company/ATS page
+  const query = [company, role, placePart, "apply", "-site:linkedin.com", "-site:indeed.com", "-site:glassdoor.com"].filter(Boolean).join(" ");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+
+    const html = await res.text();
+
+    // DuckDuckGo HTML results encode the real URL as uddg= query param
+    for (const m of html.matchAll(/uddg=(https?[^&"'\s]+)/g)) {
+      try {
+        const href = decodeURIComponent(m[1]);
+        if (!href.startsWith("http")) continue;
+        if (isAggregator(href)) continue;
+        if (isSearchResultsPage(href)) continue;
+        return href;
+      } catch { /* skip malformed */ }
+    }
+
+    // Fallback: extract plain hrefs that look like career pages
+    for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
+      const href = m[1];
+      if (isAggregator(href)) continue;
+      if (isSearchResultsPage(href)) continue;
+      if (isCareerUrl(href)) return href;
+    }
+  } catch { /* network failure */ }
+  finally { clearTimeout(timer); }
+
+  return null;
 }
 
 async function resolveAdzunaUrl(url: string): Promise<string | null> {
@@ -64,29 +128,24 @@ async function resolveAdzunaUrl(url: string): Promise<string | null> {
     });
     clearTimeout(timer);
 
-    // Clean redirect away from Adzuna
     const finalUrl = res.url;
     if (finalUrl && isNonAdzuna(finalUrl) && finalUrl !== url) return finalUrl;
 
     const html = await res.text();
 
-    // 1. __NEXT_DATA__ — Adzuna is a Next.js app; apply URL is often in the SSR payload
     const nextData = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i)?.[1];
     if (nextData) {
-      // Targeted known keys
       const targeted = nextData.match(
         /"(?:apply_url|source_url|external_url|applyUrl|sourceUrl|externalUrl|job_url|apply_link|directUrl|direct_url|applicationUrl|redirect_url)"\s*:\s*"(https?:\/\/(?![^"]*adzuna)[^"]+)"/
       );
       if (targeted) return decodeURIComponent(targeted[1].replace(/\\u002F/g, "/"));
 
-      // Broader: any key with apply/source/external + external URL
       const broad = nextData.match(
         /"[a-z_]*(?:apply|source|external|direct)[a-z_]*"\s*:\s*"(https?:\/\/(?![^"]*adzuna)[^"]+)"/i
       );
       if (broad) return decodeURIComponent(broad[1].replace(/\\u002F/g, "/"));
     }
 
-    // 2. JSON-LD structured data
     for (const block of html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)) {
       try {
         const data = JSON.parse(block[1]) as Record<string, unknown>;
@@ -97,22 +156,15 @@ async function resolveAdzunaUrl(url: string): Promise<string | null> {
       } catch { /* ignore */ }
     }
 
-    // 3. href/src with ATS params — catches custom-domain Greenhouse/Lever
     for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
       if (hasAtsParam(m[1])) return m[1];
     }
-
-    // 4. href matching known ATS domains
     for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
       if (ATS_DOMAINS.some(d => m[1].includes(d))) return m[1];
     }
-
-    // 5. Any URL in the page that looks like a career/apply URL (heuristic)
     for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
       if (isCareerUrl(m[1])) return m[1];
     }
-
-    // 6. data-url / data-apply-url attributes
     for (const m of html.matchAll(/data-(?:href|url|apply-?url)="(https?:\/\/[^"]+)"/g)) {
       if (isNonAdzuna(m[1])) return m[1];
     }
@@ -138,17 +190,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Adzuna URL or a stored search-engine URL — try to resolve to the actual career page
+  // Adzuna URL: try to extract the actual apply link from the page
   const resolveTarget = url.includes("adzuna.com") ? url : null;
   const resolved = resolveTarget ? await resolveAdzunaUrl(resolveTarget) : null;
   if (resolved && !isSearchResultsPage(resolved)) return NextResponse.redirect(resolved);
 
-  // Final fallback: DuckDuckGo "I'm Feeling Lucky" lands on the first result —
-  // usually the exact job posting on the company's ATS or careers page.
+  // Smart search: query DuckDuckGo and take the first non-aggregator result
+  // This finds the direct company career/ATS page — same as the first Google result
+  if (company && role) {
+    const searchUrl = await searchCareerUrl(company, role, location);
+    if (searchUrl) return NextResponse.redirect(searchUrl);
+  }
+
+  // Last resort: show Google search results so the user can pick the right link
   const country = location.split(",").pop()?.trim() ?? "";
-  const query = company && role
-    ? `"${company}" "${role}"${country ? ` "${country}"` : ""} careers apply`
-    : [company, role, country, "careers apply"].filter(Boolean).join(" ");
-  const fallback = `https://duckduckgo.com/?q=!ducky+${encodeURIComponent(query)}`;
-  return NextResponse.redirect(fallback);
+  const googleQuery = [company, role, country, "careers apply"].filter(Boolean).join(" ");
+  return NextResponse.redirect(`https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`);
 }
