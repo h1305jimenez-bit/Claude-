@@ -93,7 +93,14 @@ export default function TrackerPage() {
 
   const updateStatus = async (jobId: string, status: string) => {
     setUpdatingId(jobId);
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: status as Job["status"] } : j));
+    const now = new Date().toISOString();
+    const patch: Record<string, string | null> = { status };
+    if (status === "closed") patch.closed_date = now;
+    else patch.closed_date = null;
+    setJobs(prev => prev.map(j => j.id === jobId
+      ? { ...j, status: status as Job["status"], closed_date: status === "closed" ? now : null }
+      : j
+    ));
     await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}`, {
       method: "PATCH",
       headers: {
@@ -102,7 +109,7 @@ export default function TrackerPage() {
         "Content-Type": "application/json",
         "Prefer": "return=minimal",
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(patch),
     });
     setUpdatingId(null);
   };
@@ -202,15 +209,24 @@ export default function TrackerPage() {
                     <table className="w-full text-sm font-dm-sans">
                       <thead className="bg-surface border-b border-border">
                         <tr>
-                          {["Company", "Role", "Location", "Score", "Posted", "Status", "Apply"].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-xs text-text-dimmed font-medium">
+                          {[
+                            "Company", "Role", "Location", "Score",
+                            status === "closed" ? "Applied" : "Posted",
+                            status === "closed" ? "Days since" : null,
+                            "Status", "Apply",
+                          ].filter(Boolean).map(h => (
+                            <th key={h!} className="px-4 py-3 text-left text-xs text-text-dimmed font-medium">
                               {h}
                             </th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {group.map((job, i) => (
+                        {group.map((job, i) => {
+                          const appliedDays = job.closed_date
+                            ? Math.floor((Date.now() - new Date(job.closed_date).getTime()) / 86_400_000)
+                            : null;
+                          return (
                           <tr
                             key={job.id}
                             className={`border-b border-border last:border-0 hover:bg-surface transition-all duration-[150ms] ${
@@ -232,7 +248,26 @@ export default function TrackerPage() {
                                 {job.score}/100
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-text-dimmed text-xs">{daysAgo(job.posted_date)}</td>
+                            <td className="px-4 py-3 text-text-dimmed text-xs">
+                              {status === "closed"
+                                ? (job.closed_date ? daysAgo(job.closed_date) : "—")
+                                : daysAgo(job.posted_date)}
+                            </td>
+                            {status === "closed" && (
+                              <td className="px-4 py-3">
+                                {appliedDays !== null ? (
+                                  <span className={`text-xs font-dm-sans font-semibold px-2 py-0.5 rounded-full border ${
+                                    appliedDays <= 7
+                                      ? "border-green-300 text-green-700 bg-green-50"
+                                      : appliedDays <= 21
+                                      ? "border-yellow-300 text-yellow-700 bg-yellow-50"
+                                      : "border-border text-text-dimmed bg-surface"
+                                  }`}>
+                                    {appliedDays === 0 ? "Today" : `${appliedDays}d`}
+                                  </span>
+                                ) : <span className="text-xs text-text-dimmed">—</span>}
+                              </td>
+                            )}
                             <td className="px-4 py-3">
                               <select
                                 value={job.status}
@@ -261,7 +296,8 @@ export default function TrackerPage() {
                               )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
