@@ -38,21 +38,28 @@ export default function KitPage() {
 
   const supabase = createBrowserSupabase();
 
-  // Decode HTML entities and convert block/line tags to newlines using the browser parser
+  // Strip HTML and decode entities using the browser parser; preserve paragraph breaks
   const cleanDescription = useMemo(() => {
     if (!job?.description) return "";
+    // Pre-convert block/line elements to newlines before handing to the DOM parser
     const raw = job.description
       .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/(?:p|div|li|h[1-6])>/gi, "\n")
-      .replace(/<li[^>]*>/gi, "\n• ");
+      .replace(/<\/(?:p|div|h[1-6])>/gi, "\n\n")
+      .replace(/<\/li>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "• ");
     if (typeof document !== "undefined") {
       const el = document.createElement("div");
       el.innerHTML = raw;
       return (el.textContent ?? el.innerText ?? "")
-        .replace(/\n{3,}/g, "\n\n")
+        .replace(/[ \t]+/g, " ")        // collapse horizontal whitespace only
+        .replace(/\n{3,}/g, "\n\n")     // max two consecutive newlines
         .trim();
     }
-    return raw.replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+    return raw
+      .replace(/<[^>]+>/g, "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }, [job?.description]);
 
   const loadData = useCallback(async () => {
@@ -236,17 +243,17 @@ export default function KitPage() {
               {cleanDescription && (
                 <div className="mt-4 border-t border-border pt-4">
                   <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-2">Job description</p>
-                  <p className={`text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line ${!showFullDesc && cleanDescription.length > 500 ? "line-clamp-5" : ""}`}>
-                    {cleanDescription}
-                  </p>
-                  {cleanDescription.length > 500 && (
-                    <button
-                      onClick={() => setShowFullDesc(v => !v)}
-                      className="mt-2 text-xs text-text-dimmed hover:text-text-primary font-dm-sans transition-all duration-[150ms]"
-                    >
-                      {showFullDesc ? "Show less ↑" : "Show more ↓"}
-                    </button>
-                  )}
+                  <div className={`overflow-hidden transition-all duration-300 ${showFullDesc ? "" : "max-h-36"}`}>
+                    <p className="text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line">
+                      {cleanDescription}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowFullDesc(v => !v)}
+                    className="mt-2 text-xs text-text-dimmed hover:text-text-primary font-dm-sans transition-all duration-[150ms]"
+                  >
+                    {showFullDesc ? "Show less ↑" : "Show more ↓"}
+                  </button>
                 </div>
               )}
             </KitPanel>
