@@ -48,6 +48,9 @@ export async function GET(req: NextRequest) {
       target_location: user.target_location,
       seniority: user.seniority,
       work_authorization: user.work_authorization,
+      salary_expectation: user.salary_expectation,
+      cv_url: user.cv_url,
+      cv_text: (user.cv_text ?? "").slice(0, 4000),
     },
   }, { headers });
 }

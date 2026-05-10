@@ -75,16 +75,102 @@ function detectPortal(url) {
   return { name: "Unknown portal", key: "default" };
 }
 
-function buildFieldsPreview(profile) {
+// Parse CV text to extract current company, title, summary, responsibilities
+function parseCvText(cvText) {
+  if (!cvText || cvText.length < 50) return {};
+
+  const result = {};
+
+  // Summary: look for an explicit summary/about/profile section first
+  const summaryMatch = cvText.match(
+    /(?:SUMMARY|PROFILE|OBJECTIVE|ABOUT ME|PROFESSIONAL SUMMARY)[:\s]*\n+([\s\S]{50,600}?)(?=\n[A-Z][A-Z\s]{2,}\n|\n(?:EXPERIENCE|EDUCATION|SKILLS|EMPLOYMENT)\b|$)/i
+  );
+  if (summaryMatch) {
+    result.summary = summaryMatch[1].replace(/\s+/g, " ").trim().slice(0, 500);
+  } else {
+    // Fall back to the first meaningful paragraph before any section header
+    const firstHeader = cvText.search(/\n[A-Z][A-Z\s]{3,}\n|\n(?:EXPERIENCE|EDUCATION|SKILLS|EMPLOYMENT|SUMMARY)\b/i);
+    if (firstHeader > 80) {
+      result.summary = cvText.slice(0, firstHeader).replace(/\s+/g, " ").trim().slice(0, 400);
+    }
+  }
+
+  // Work experience section
+  const expMatch = cvText.match(
+    /(?:EXPERIENCE|EMPLOYMENT HISTORY|WORK HISTORY|PROFESSIONAL EXPERIENCE|WORK EXPERIENCE)[:\s]*\n([\s\S]{0,3000}?)(?=\n[A-Z][A-Z\s]{3,}\n|\n(?:EDUCATION|SKILLS|CERTIFICATIONS|LANGUAGES|PROJECTS)\b|$)/i
+  );
+  if (expMatch) {
+    const expSection = expMatch[1];
+    const lines = expSection.split("\n").map(l => l.trim()).filter(Boolean);
+
+    // Try "Title at Company" pattern
+    const atMatch = lines[0] && lines[0].match(/^(.+?)\s+at\s+(.+?)(?:[,|\s]\s*\d{4})?$/i);
+    if (atMatch) {
+      result.currentTitle = atMatch[1].trim();
+      result.currentCompany = atMatch[2].trim();
+    }
+
+    // Try "Company | Title" or "Title | Company"
+    if (!result.currentCompany) {
+      const pipeMatch = lines[0] && lines[0].match(/^(.+?)\s*[|–—]\s*(.+?)(?:\s*[|–—]\s*[\d\s\-–—]+)?$/);
+      if (pipeMatch) {
+        result.currentCompany = pipeMatch[1].trim();
+        const second = pipeMatch[2].trim();
+        result.currentTitle = /\d{4}/.test(second) ? "" : second;
+        if (!result.currentTitle) {
+          const titleLine = lines.slice(1).find(l => !l.match(/^\d{4}/) && !l.match(/^[-•]/) && l.length < 80);
+          if (titleLine) result.currentTitle = titleLine;
+        }
+      }
+    }
+
+    // Last fallback: line 0 = company, line 1 = title (no dates/bullets)
+    if (!result.currentCompany && lines.length >= 2) {
+      if (!lines[0].match(/^[-•]/) && !lines[0].match(/^\d{4}/)) result.currentCompany = lines[0];
+      if (lines[1] && !lines[1].match(/^[-•]/) && !lines[1].match(/^\d{4}/) && lines[1].length < 80) {
+        result.currentTitle = lines[1];
+      }
+    }
+
+    // Responsibilities: bullet points from the first job entry
+    const bullets = lines
+      .filter(l => /^[-•*·▪]/.test(l))
+      .map(l => l.replace(/^[-•*·▪]\s*/, "").trim())
+      .filter(Boolean);
+    if (bullets.length > 0) {
+      result.responsibilities = bullets.slice(0, 5).join(". ") + ".";
+    }
+  }
+
+  return result;
+}
+
+// Map seniority label to a years-of-experience range string
+function seniorityToYears(seniority) {
+  if (!seniority) return "";
+  const s = seniority.toLowerCase();
+  if (s.includes("intern") || s.includes("student")) return "0-1";
+  if (s.includes("junior") || s.includes("entry") || s.includes("associate")) return "1-3";
+  if (s.includes("mid") || s.includes("intermediate")) return "3-6";
+  if (s.includes("senior") || s.includes("sr.")) return "6-10";
+  if (s.includes("lead") || s.includes("staff") || s.includes("manager")) return "8-12";
+  if (s.includes("principal") || s.includes("director") || s.includes("vp")) return "12+";
+  return seniority;
+}
+
+function buildFieldsPreview(user) {
   return [
-    ["First name", profile.name?.split(" ")[0]],
-    ["Last name", profile.name?.split(" ").slice(1).join(" ")],
-    ["Email", profile.email],
-    ["Phone", profile.phone],
-    ["LinkedIn", profile.linkedin],
-    ["Location", profile.target_location],
-    ["Work auth.", profile.work_authorization],
-    ["Seniority", profile.seniority],
+    ["First name", user.name?.split(" ")[0]],
+    ["Last name", user.name?.split(" ").slice(1).join(" ")],
+    ["Email", user.email],
+    ["Phone", user.phone],
+    ["LinkedIn", user.linkedin],
+    ["Location", user.target_location],
+    ["Work auth.", user.work_authorization],
+    ["Seniority", user.seniority],
+    ["Salary", user.salary_expectation],
+    ["Current company", user.currentCompany],
+    ["Current title", user.currentTitle],
   ].filter(([, v]) => v);
 }
 
@@ -121,7 +207,17 @@ async function init() {
 
   try {
     const data = await fetchProfile(token, apiUrl);
-    const { user } = data;
+    const user = data.user;
+
+    // Enrich user with parsed CV data and derived fields
+    if (user.cv_text) {
+      const parsed = parseCvText(user.cv_text);
+      user.currentCompany = parsed.currentCompany || "";
+      user.currentTitle = parsed.currentTitle || "";
+      user.summary = parsed.summary || "";
+      user.responsibilities = parsed.responsibilities || "";
+    }
+    user.yearsExp = seniorityToYears(user.seniority);
 
     setupView.style.display = "none";
     connectedView.style.display = "block";
@@ -154,6 +250,13 @@ async function init() {
     fillBtn.textContent = isDefault ? "Fill form (generic)" : `Fill ${portal.name} form`;
     fillBtn.disabled = false;
     fillBtn.onclick = () => triggerFill(tab, user, portal.key);
+
+    // CV download button — opens the stored CV PDF/doc in a new tab
+    const dlBtn = document.getElementById("downloadCvBtn");
+    if (user.cv_url) {
+      dlBtn.style.display = "block";
+      dlBtn.onclick = () => chrome.tabs.create({ url: user.cv_url });
+    }
 
   } catch {
     await clearStored();
@@ -215,7 +318,7 @@ function fillForm(portalKey, user) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  // Find input whose label contains any keyword
+  // Find input/textarea whose label contains any keyword
   function findByLabel(keywords) {
     const kw = keywords.map(k => k.toLowerCase());
     for (const label of document.querySelectorAll("label")) {
@@ -266,18 +369,21 @@ function fillForm(portalKey, user) {
       { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
       { s: ['input[name="phone"]', 'input[type="tel"]'], v: user.phone },
       { s: ['input[name="urls[LinkedIn]"]'], v: user.linkedin },
+      { s: ['input[name="org"]', 'input[name="company"]'], v: user.currentCompany },
     ],
     workday: [
       { s: ['input[data-automation-id="legalNameSection_firstName"]'], v: firstName },
       { s: ['input[data-automation-id="legalNameSection_lastName"]'], v: lastName },
       { s: ['input[data-automation-id="email"]', 'input[type="email"]'], v: user.email },
       { s: ['input[data-automation-id="phone-number"]', 'input[type="tel"]'], v: user.phone },
+      { s: ['input[data-automation-id="addressSection_city"]'], v: user.target_location },
     ],
     smartrecruiters: [
       { s: ['input[name="firstName"]', 'input[id="firstName"]'], v: firstName },
       { s: ['input[name="lastName"]', 'input[id="lastName"]'], v: lastName },
       { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
       { s: ['input[name="phoneNumber"]', 'input[type="tel"]'], v: user.phone },
+      { s: ['input[name="location"]'], v: user.target_location },
     ],
     bamboohr: [
       { s: ['input[id="firstName"]'], v: firstName },
@@ -290,6 +396,7 @@ function fillForm(portalKey, user) {
       { s: ['input[name="lastname"]'], v: lastName },
       { s: ['input[name="email"]', 'input[type="email"]'], v: user.email },
       { s: ['input[name="phone"]', 'input[type="tel"]'], v: user.phone },
+      { s: ['input[name="summary"]', 'textarea[name="summary"]'], v: user.summary },
     ],
     jobvite: [
       { s: ['input[id="jv-firstName"]'], v: firstName },
@@ -309,6 +416,7 @@ function fillForm(portalKey, user) {
       { s: ['input[name="phone"]', 'input[type="tel"]'], v: user.phone },
       { s: ['input[name="linkedin"]'], v: user.linkedin },
       { s: ['input[name="location"]'], v: user.target_location },
+      { s: ['input[name="company"]', 'input[name="currentCompany"]'], v: user.currentCompany },
     ],
     default: [
       { s: ['input[name*="first" i][type="text"]', 'input[id*="first" i][type="text"]', 'input[placeholder*="First name" i]'], v: firstName },
@@ -324,16 +432,34 @@ function fillForm(portalKey, user) {
 
   // 2. Label-based fills — catches custom questions on any portal
   const LABEL_FILLS = [
+    // Identity
     { kw: ["first name", "given name", "prénom", "nombre"], v: firstName },
     { kw: ["last name", "family name", "surname", "apellido"], v: lastName },
     { kw: ["full name", "your name", "nombre completo"], v: fullName },
+    // Contact
     { kw: ["email", "e-mail", "correo"], v: user.email },
     { kw: ["phone", "mobile", "telephone", "téléphone", "teléfono"], v: user.phone },
     { kw: ["linkedin"], v: user.linkedin },
-    { kw: ["location", "city", "where are you", "ciudad", "ubicación", "ville"], v: user.target_location },
-    { kw: ["work authoriz", "work permit", "eligible to work", "right to work"], v: user.work_authorization },
-    { kw: ["website", "portfolio", "personal site"], v: user.linkedin },
-    { kw: ["education", "school", "university", "degree"], v: user.education },
+    // Location & work auth
+    { kw: ["location", "city", "where are you based", "ciudad", "ubicación", "ville"], v: user.target_location },
+    { kw: ["work authoriz", "work permit", "eligible to work", "right to work", "visa"], v: user.work_authorization },
+    // Online presence
+    { kw: ["website", "portfolio", "personal site", "github"], v: user.linkedin },
+    // Education
+    { kw: ["education", "school", "university", "college", "degree", "qualification", "highest level"], v: user.education },
+    // Compensation
+    { kw: ["salary", "compensation", "expected pay", "desired salary", "expected salary", "pay expectation", "remuneration", "wage", "annual pay"], v: user.salary_expectation },
+    // Target role
+    { kw: ["desired role", "position applying", "role applying", "desired position", "applying for", "job title (desired)", "what role"], v: user.target_role },
+    // Current employment
+    { kw: ["current employer", "current company", "most recent employer", "current organization", "employer name", "company name", "where do you work", "present employer"], v: user.currentCompany },
+    { kw: ["current title", "current role", "current position", "job title", "your title", "position held", "most recent title", "last title"], v: user.currentTitle },
+    // Experience
+    { kw: ["years of experience", "years experience", "how many years", "years in the field", "total experience", "years worked"], v: user.yearsExp },
+    // Cover letter / motivation (uses summary parsed from CV)
+    { kw: ["cover letter", "motivation letter", "why do you want", "tell us about yourself", "about yourself", "tell us why", "why are you interested", "why apply", "additional information", "anything else"], v: user.summary },
+    // Responsibilities from CV bullets
+    { kw: ["responsibilities", "describe your experience", "key achievements", "what did you do", "describe your role", "previous responsibilities", "main duties"], v: user.responsibilities },
   ];
 
   for (const { kw, v } of LABEL_FILLS) {
@@ -342,11 +468,17 @@ function fillForm(portalKey, user) {
     if (el) { setNativeValue(el, v); filled++; }
   }
 
-  // 3. Selector-based fallback for fields label detection may miss
+  // 3. Selector-based fallback sweeps
   const EXTRA = [
     { s: ['input[name*="linkedin" i]', 'input[placeholder*="linkedin" i]', 'input[id*="linkedin" i]'], v: user.linkedin },
     { s: ['input[id^="job_application_answers_attributes_"][id$="_text_value"]'], v: user.linkedin },
     { s: ['input[name*="location" i]', 'input[placeholder*="city" i]'], v: user.target_location },
+    { s: ['input[name*="salary" i]', 'input[placeholder*="salary" i]', 'input[id*="salary" i]'], v: user.salary_expectation },
+    { s: ['input[name*="company" i]', 'input[id*="employer" i]', 'input[placeholder*="employer" i]'], v: user.currentCompany },
+    { s: ['input[name*="current_title" i]', 'input[name*="currentTitle" i]', 'input[id*="current_title" i]'], v: user.currentTitle },
+    { s: ['textarea[name*="cover" i]', 'textarea[id*="cover" i]', 'textarea[placeholder*="cover letter" i]'], v: user.summary },
+    { s: ['textarea[name*="summary" i]', 'textarea[id*="summary" i]', 'textarea[placeholder*="about" i]'], v: user.summary },
+    { s: ['textarea[name*="responsibilities" i]', 'textarea[id*="responsibilities" i]'], v: user.responsibilities },
   ];
   for (const { s, v } of EXTRA) {
     if (trySelectors(s, v)) filled++;
@@ -365,6 +497,11 @@ function fillForm(portalKey, user) {
     }
     if (user.seniority && (labelText.includes("senior") || labelText.includes("level") || labelText.includes("years of exp"))) {
       const match = opts.find(o => o.text.toLowerCase().includes(user.seniority.toLowerCase()));
+      if (match) { sel.value = match.value; sel.dispatchEvent(new Event("change", { bubbles: true })); filled++; }
+    }
+    if (user.work_authorization && (labelText.includes("country") || labelText.includes("nationality"))) {
+      const firstWord = user.work_authorization.toLowerCase().split(" ")[0];
+      const match = opts.find(o => o.text.toLowerCase().includes(firstWord));
       if (match) { sel.value = match.value; sel.dispatchEvent(new Event("change", { bubbles: true })); filled++; }
     }
   }
