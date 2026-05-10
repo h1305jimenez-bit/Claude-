@@ -171,16 +171,16 @@ async function triggerFill(tab, user, portalKey) {
 
   try {
     const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
+      target: { tabId: tab.id, allFrames: true },
       func: fillForm,
       args: [portalKey, user],
     });
 
-    const result = results?.[0]?.result;
-    if (result?.filled > 0) {
-      showStatus(fillStatus, `Filled ${result.filled} field${result.filled !== 1 ? "s" : ""}. Review before submitting.`, "success");
+    const totalFilled = (results ?? []).reduce((sum, r) => sum + (r?.result?.filled ?? 0), 0);
+    if (totalFilled > 0) {
+      showStatus(fillStatus, `Filled ${totalFilled} field${totalFilled !== 1 ? "s" : ""}. Review before submitting.`, "success");
     } else {
-      showStatus(fillStatus, "No fillable fields found on this page.", "info");
+      showStatus(fillStatus, "No fillable fields found. The form may use a different structure.", "info");
     }
   } catch (e) {
     showStatus(fillStatus, `Error: ${e.message}`, "error");
@@ -339,7 +339,7 @@ function fillForm(portalKey, user) {
   for (const { kw, v } of LABEL_FILLS) {
     if (!v) continue;
     const el = findByLabel(kw);
-    if (el && !el.value) { setNativeValue(el, v); filled++; }
+    if (el) { setNativeValue(el, v); filled++; }
   }
 
   // 3. Selector-based fallback for fields label detection may miss
