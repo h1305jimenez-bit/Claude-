@@ -93,6 +93,19 @@ export async function POST(req: NextRequest) {
     const adzunaCount = adzunaJobs.length;
     const jobsToScore = adzunaJobs.slice(0, 8);
 
+    // Resolve Adzuna tracking URLs to actual company career page URLs (parallel, 3s timeout each)
+    async function resolveUrl(url: string): Promise<string> {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      try {
+        const res = await fetch(url, { method: "HEAD", redirect: "follow", signal: controller.signal });
+        return res.url && res.url !== url ? res.url : url;
+      } catch { return url; }
+      finally { clearTimeout(timer); }
+    }
+    const resolvedUrls = await Promise.all(jobsToScore.map(j => resolveUrl(j.redirect_url)));
+    const resolvedUrlMap = new Map(jobsToScore.map((j, i) => [j.id, resolvedUrls[i]]));
+
     const candidateContext = `Role: ${user.target_role}
 Location: ${user.target_location || "Any"}
 Seniority: ${user.seniority || "Not specified"}
@@ -145,7 +158,7 @@ JSON format:
           estimated_time: `${parsed.estimatedMinutes} min`,
           status: "new",
           kit_ready: false,
-          url: job.redirect_url,
+          url: resolvedUrlMap.get(job.id) ?? job.redirect_url,
           description: job.description || "",
           posted_date: job.created,
           // application_flow and tip require DB migration — stored separately once columns exist
