@@ -243,7 +243,7 @@ export default function KitPage() {
               {cleanDescription && (
                 <div className="mt-4 border-t border-border pt-4">
                   <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-2">Job description</p>
-                  <div className={`overflow-hidden transition-all duration-300 ${showFullDesc ? "" : "max-h-36"}`}>
+                  <div className={`overflow-hidden transition-all duration-300 ${showFullDesc ? "max-h-[2000px]" : "max-h-36"}`}>
                     <p className="text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line">
                       {cleanDescription}
                     </p>
