@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
   const company = req.nextUrl.searchParams.get("company") ?? "";
   const role = req.nextUrl.searchParams.get("role") ?? "";
+  const location = req.nextUrl.searchParams.get("location") ?? "";
 
   if (!url || !url.startsWith("http")) {
     return NextResponse.json({ error: "Invalid url" }, { status: 400 });
@@ -100,8 +101,9 @@ export async function GET(req: NextRequest) {
   if (resolved) return NextResponse.redirect(resolved);
 
   // Could not resolve — fall back to a Google search for the specific job
-  // This guarantees the user never lands on Adzuna
-  const query = [company, role, "careers apply"].filter(Boolean).join(" ");
+  // Include location so the correct country's posting appears first
+  const country = location.split(",").pop()?.trim() ?? "";
+  const query = [company, role, country, "careers apply"].filter(Boolean).join(" ");
   const fallback = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   return NextResponse.redirect(fallback);
 }

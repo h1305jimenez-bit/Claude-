@@ -249,7 +249,7 @@ export default function TrackerPage() {
                             <td className="px-4 py-3">
                               {job.url ? (
                                 <a
-                                  href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}`}
+                                  href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-xs px-2 py-1 border border-border rounded-[6px] text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms]"

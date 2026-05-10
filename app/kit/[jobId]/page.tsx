@@ -229,7 +229,7 @@ export default function KitPage() {
               <p className="mt-4 text-xs text-text-dimmed font-dm-sans">
                 For the full job description,{" "}
                 <a
-                  href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}`}
+                  href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline hover:text-text-primary transition-all duration-[150ms]"
@@ -266,7 +266,7 @@ export default function KitPage() {
 
             <div className="flex gap-2">
               {(() => {
-                const goUrl = `/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}`;
+                const goUrl = `/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`;
                 return (
                   <>
                     <a
