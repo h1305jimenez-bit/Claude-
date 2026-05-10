@@ -245,19 +245,6 @@ export default function KitPage() {
                   <p className="text-sm font-dm-sans text-text-primary">{job.tip}</p>
                 </div>
               )}
-              {job.url && (
-                <p className="mt-4 text-xs text-text-dimmed font-dm-sans">
-                  For the full job description,{" "}
-                  <a
-                    href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-text-primary transition-all duration-[150ms]"
-                  >
-                    view the job posting ↗
-                  </a>
-                </p>
-              )}
             </KitPanel>
 
             {job.application_flow && job.application_flow.length > 0 && (
@@ -285,33 +272,28 @@ export default function KitPage() {
               </KitPanel>
             )}
 
-            {job.url && (
-              <div className="flex gap-2">
-                {(() => {
-                  const goUrl = `/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`;
-                  return (
-                    <>
-                      <a
-                        href={goUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
-                      >
-                        View job posting ↗
-                      </a>
-                      <a
-                        href={goUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
-                      >
-                        Apply →
-                      </a>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
+            {(() => {
+                const goUrl = `/api/jobs/go?url=${encodeURIComponent(job.url ?? "")}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`;
+                const searchPreview = [`"${job.company}"`, `"${job.role}"`, job.location ? `"${job.location}"` : "", "careers"].filter(Boolean).join(" ");
+                return (
+                  <div className="space-y-2">
+                    <a
+                      href={goUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
+                    >
+                      Apply →
+                    </a>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-text-dimmed font-dm-sans shrink-0">Search:</span>
+                      <span className="flex-1 text-xs font-mono text-text-dimmed bg-surface border border-border rounded-[6px] px-2.5 py-1.5 truncate select-all">
+                        {searchPreview}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
           </div>
         )}
 
