@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { PageSpinner } from "@/components/Spinner";
 import type { Job } from "@/lib/types";
 
 const PIPELINE_STATUSES = ["open", "closing", "closed"] as const;
@@ -200,11 +201,7 @@ export default function TrackerPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="border border-border rounded-[8px] h-16 animate-pulse bg-surface" />
-            ))}
-          </div>
+          <PageSpinner label="Loading tracker…" />
         ) : jobs.length === 0 ? (
           <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
             <p className="text-text-dimmed font-dm-sans text-sm mb-2">No tracked jobs yet.</p>

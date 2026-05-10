@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { Spinner } from "@/components/Spinner";
 import type { User } from "@/lib/types";
 
 const TABS = ["Profile", "Preferences", "Account"] as const;
@@ -209,10 +210,10 @@ export default function ProfilePage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="ml-56 flex-1 p-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-6 w-48 bg-surface-secondary rounded" />
-            <div className="h-4 w-32 bg-surface-secondary rounded" />
+        <main className="ml-56 flex-1 p-8 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Spinner size="lg" />
+            <p className="text-xs text-text-dimmed font-dm-sans">Loading profile…</p>
           </div>
         </main>
       </div>
@@ -282,7 +283,7 @@ export default function ProfilePage() {
                 disabled={!cvFile || uploadingCv}
                 className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
               >
-                {uploadingCv ? "Uploading..." : "Upload CV"}
+                {uploadingCv ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Uploading…</span> : "Upload CV"}
               </button>
             </div>
           </div>
@@ -314,7 +315,9 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs text-text-dimmed font-dm-sans">Target roles</label>
                 {loadingSuggestions && (
-                  <span className="text-xs text-text-dimmed font-dm-sans animate-pulse">Suggesting from CV...</span>
+                  <span className="flex items-center gap-1.5 text-xs text-text-dimmed font-dm-sans">
+                    <Spinner size="sm" />Suggesting…
+                  </span>
                 )}
               </div>
 

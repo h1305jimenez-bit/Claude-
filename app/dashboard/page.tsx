@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { JobRow } from "@/components/JobRow";
 import { RefreshMeter } from "@/components/RefreshMeter";
 import { AddJobModal } from "@/components/AddJobModal";
+import { PageSpinner } from "@/components/Spinner";
 import type { Job, User } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -281,14 +282,7 @@ export default function DashboardPage() {
           )}
 
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="border border-border rounded-[8px] p-4 animate-pulse bg-surface">
-                  <div className="h-4 bg-surface-secondary rounded w-2/3 mb-2" />
-                  <div className="h-3 bg-surface-secondary rounded w-1/3" />
-                </div>
-              ))}
-            </div>
+            <PageSpinner label="Loading your matches…" />
           ) : jobs.length === 0 && !refreshing ? (
             <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
               <p className="font-dm-sans text-text-dimmed text-sm mb-1">No new matches right now.</p>

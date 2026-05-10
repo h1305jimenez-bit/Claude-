@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Spinner } from "@/components/Spinner";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -123,7 +124,7 @@ export default function AuthPage() {
             disabled={loading}
             className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-50"
           >
-            {loading ? "..." : mode === "signup" ? "Create account" : "Log in"}
+            {loading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />{mode === "signup" ? "Creating account…" : "Logging in…"}</span> : mode === "signup" ? "Create account" : "Log in"}
           </button>
         </form>
       </div>

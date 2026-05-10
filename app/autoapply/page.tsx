@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/Sidebar";
+import { PageSpinner } from "@/components/Spinner";
 import { ApplyModal } from "@/components/ApplyModal";
 import type { Job, Kit } from "@/lib/types";
 
@@ -88,14 +89,7 @@ export default function AutoApplyPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-border rounded-[8px] p-4 animate-pulse bg-surface">
-                <div className="h-4 bg-surface-secondary rounded w-2/3 mb-2" />
-                <div className="h-3 bg-surface-secondary rounded w-1/3" />
-              </div>
-            ))}
-          </div>
+          <PageSpinner label="Loading kits…" />
         ) : jobs.length === 0 ? (
           <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
             <p className="text-text-dimmed font-dm-sans text-sm mb-2">No kits ready yet.</p>

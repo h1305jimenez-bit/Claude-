@@ -5,6 +5,7 @@ import { createBrowserSupabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { KitPanel, KitSkeleton } from "@/components/KitPanel";
+import { Spinner } from "@/components/Spinner";
 import type { Job, Kit, User, JobInsights } from "@/lib/types";
 
 const TABS = [
@@ -159,9 +160,11 @@ export default function KitPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="ml-56 flex-1 p-8">
-          <div className="h-6 w-48 bg-surface-secondary rounded animate-pulse mb-8" />
-          <KitSkeleton />
+        <main className="ml-56 flex-1 p-8 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Spinner size="lg" />
+            <p className="text-xs text-text-dimmed font-dm-sans">Loading…</p>
+          </div>
         </main>
       </div>
     );
@@ -405,13 +408,9 @@ export default function KitPage() {
             )}
 
             {generatingInsights && (
-              <div className="space-y-4 animate-pulse">
-                {[1,2,3,4].map((i) => (
-                  <div key={i} className="border border-border rounded-[8px] p-5 bg-surface">
-                    <div className="h-4 bg-surface-secondary rounded w-1/3 mb-3" />
-                    <div className="h-3 bg-surface-secondary rounded w-2/3" />
-                  </div>
-                ))}
+              <div className="flex flex-col items-center gap-3 py-16">
+                <Spinner size="lg" />
+                <p className="text-xs text-text-dimmed font-dm-sans">Analysing job description…</p>
               </div>
             )}
 

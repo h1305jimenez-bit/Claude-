@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Spinner } from "@/components/Spinner";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -149,7 +150,7 @@ export default function OnboardingPage() {
               disabled={!cvFile || uploading}
               className="w-full py-3 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
             >
-              {uploading ? "Uploading & parsing..." : "Upload CV"}
+              {uploading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Uploading & parsing…</span> : "Upload CV"}
             </button>
           </div>
         )}
