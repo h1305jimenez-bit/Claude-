@@ -203,9 +203,28 @@ export default function DashboardPage() {
               <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">
                 {user?.target_role ? `Jobs for ${user.target_role}` : "Your jobs"}
               </h1>
-              <p className="text-text-dimmed text-sm font-dm-sans">
+              <p className="text-text-dimmed text-sm font-dm-sans mb-2">
                 Matched to your CV · scored by AI
               </p>
+              {user && (
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    user.target_location,
+                    user.seniority,
+                    user.work_authorization,
+                    user.target_companies,
+                  ]
+                    .flatMap(v => v ? v.split(",").map(s => s.trim()).filter(Boolean) : [])
+                    .map((chip, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-dm-sans bg-surface border border-border text-text-dimmed"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setShowAddJob(true)}
