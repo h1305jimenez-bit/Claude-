@@ -60,6 +60,22 @@ export default function TrackerPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const [postingStatus, setPostingStatus] = useState<Record<string, "checking" | "active" | "removed" | "unknown">>({});
+
+  const checkPosting = async (jobId: string, url: string) => {
+    setPostingStatus(prev => ({ ...prev, [jobId]: "checking" }));
+    try {
+      const res = await fetch(`/api/jobs/check-url?url=${encodeURIComponent(url)}`);
+      const data = await res.json() as { active: boolean | null };
+      setPostingStatus(prev => ({
+        ...prev,
+        [jobId]: data.active === true ? "active" : data.active === false ? "removed" : "unknown",
+      }));
+    } catch {
+      setPostingStatus(prev => ({ ...prev, [jobId]: "unknown" }));
+    }
+  };
+
   const [resetting, setResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -212,11 +228,13 @@ export default function TrackerPage() {
                         <tr>
                           {[
                             "Company", "Role", "Location", "Score",
-                            status === "closed" ? "Applied" : "Posted",
+                            "Posted",
+                            status === "closed" ? "Applied" : null,
                             status === "closed" ? "Days since" : null,
+                            status === "closed" ? "Posting" : null,
                             "Status", "Apply",
                           ].filter(Boolean).map(h => (
-                            <th key={h!} className="px-4 py-3 text-left text-xs text-text-dimmed font-medium">
+                            <th key={h!} className="px-3 py-3 text-left text-xs text-text-dimmed font-medium">
                               {h}
                             </th>
                           ))}
@@ -227,6 +245,7 @@ export default function TrackerPage() {
                           const appliedDays = job.closed_date
                             ? Math.floor((Date.now() - new Date(job.closed_date).getTime()) / 86_400_000)
                             : null;
+                          const ps = postingStatus[job.id];
                           return (
                           <tr
                             key={job.id}
@@ -234,8 +253,8 @@ export default function TrackerPage() {
                               i % 2 === 0 ? "bg-background" : "bg-surface"
                             }`}
                           >
-                            <td className="px-4 py-3 font-medium text-text-primary">{job.company}</td>
-                            <td className="px-4 py-3 text-text-dimmed max-w-[200px]">
+                            <td className="px-3 py-3 font-medium text-text-primary">{job.company}</td>
+                            <td className="px-3 py-3 text-text-dimmed max-w-[160px]">
                               <a
                                 href={`/kit/${job.id}`}
                                 className="hover:text-text-primary hover:underline transition-all duration-[150ms]"
@@ -243,19 +262,25 @@ export default function TrackerPage() {
                                 {job.role}
                               </a>
                             </td>
-                            <td className="px-4 py-3 text-text-dimmed text-xs">{job.location || "—"}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-3 text-text-dimmed text-xs">{job.location || "—"}</td>
+                            <td className="px-3 py-3">
                               <span className="text-xs px-2 py-0.5 border border-border rounded-full font-dm-sans font-semibold text-text-primary">
                                 {job.score}/100
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-text-dimmed text-xs">
-                              {status === "closed"
-                                ? (job.closed_date ? daysAgo(job.closed_date) : "—")
-                                : daysAgo(job.posted_date)}
+                            {/* Posted — original job posting date, all groups */}
+                            <td className="px-3 py-3 text-text-dimmed text-xs">
+                              {daysAgo(job.posted_date)}
                             </td>
+                            {/* Applied date — closed group only */}
                             {status === "closed" && (
-                              <td className="px-4 py-3">
+                              <td className="px-3 py-3 text-text-dimmed text-xs">
+                                {job.closed_date ? daysAgo(job.closed_date) : "—"}
+                              </td>
+                            )}
+                            {/* Days since applied badge — closed group only */}
+                            {status === "closed" && (
+                              <td className="px-3 py-3">
                                 {appliedDays !== null ? (
                                   <span className={`text-xs font-dm-sans font-semibold px-2 py-0.5 rounded-full border ${
                                     appliedDays <= 7
@@ -269,7 +294,32 @@ export default function TrackerPage() {
                                 ) : <span className="text-xs text-text-dimmed">—</span>}
                               </td>
                             )}
-                            <td className="px-4 py-3">
+                            {/* Posting status — closed group only */}
+                            {status === "closed" && (
+                              <td className="px-3 py-3">
+                                {!ps && job.url ? (
+                                  <button
+                                    onClick={() => checkPosting(job.id, job.url)}
+                                    className="text-xs px-2 py-0.5 border border-border rounded-[6px] text-text-dimmed hover:bg-surface font-dm-sans transition-all duration-[150ms]"
+                                  >
+                                    Check
+                                  </button>
+                                ) : ps === "checking" ? (
+                                  <span className="text-xs text-text-dimmed font-dm-sans">Checking…</span>
+                                ) : ps === "active" ? (
+                                  <span className="text-xs font-dm-sans font-semibold text-green-700 bg-green-50 border border-green-300 px-2 py-0.5 rounded-full">
+                                    Active ✓
+                                  </span>
+                                ) : ps === "removed" ? (
+                                  <span className="text-xs font-dm-sans font-semibold text-red-700 bg-red-50 border border-red-300 px-2 py-0.5 rounded-full">
+                                    Removed
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-text-dimmed font-dm-sans">—</span>
+                                )}
+                              </td>
+                            )}
+                            <td className="px-3 py-3">
                               <select
                                 value={job.status}
                                 disabled={updatingId === job.id}
@@ -282,7 +332,7 @@ export default function TrackerPage() {
                                 <option value="closed">Applied / Done</option>
                               </select>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-3">
                               {job.url ? (
                                 <a
                                   href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}&location=${encodeURIComponent(job.location ?? "")}`}
