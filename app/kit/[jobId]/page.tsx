@@ -321,67 +321,67 @@ export default function KitPage() {
                 </a>
               </div>
 
-              {/* Embedded career page */}
-              <div className="relative" style={{ height: 560 }}>
-                {resolving && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface">
-                    <div className="w-6 h-6 border-2 border-border border-t-text-dimmed rounded-full animate-spin" />
-                    <p className="text-xs text-text-dimmed font-dm-sans">Finding career page…</p>
-                  </div>
-                )}
+              {/* Spinner while resolving */}
+              {resolving && (
+                <div className="flex flex-col items-center justify-center gap-3 py-12 bg-surface">
+                  <div className="w-6 h-6 border-2 border-border border-t-text-dimmed rounded-full animate-spin" />
+                  <p className="text-xs text-text-dimmed font-dm-sans">Finding career page…</p>
+                </div>
+              )}
 
-                {!resolving && careerUrl && !iframeBlocked && (
-                  <iframe
-                    key={careerUrl}
-                    src={careerUrl}
-                    className="w-full h-full border-0"
-                    title="Career page"
-                    onLoad={() => {
-                      // After 1s, check if the iframe appears blank (X-Frame-Options block)
-                      setTimeout(() => {
-                        try {
-                          const f = document.querySelector("iframe[title='Career page']") as HTMLIFrameElement;
-                          if (f && (!f.contentDocument || !f.contentDocument.body.innerHTML)) {
-                            setIframeBlocked(true);
-                          }
-                        } catch { /* cross-origin — can't read, but load fired so probably ok */ }
-                      }, 1000);
-                    }}
-                    onError={() => setIframeBlocked(true)}
-                  />
-                )}
+              {/* Iframe — only rendered when we have a URL and it's not blocked */}
+              {!resolving && careerUrl && !iframeBlocked && (
+                <iframe
+                  key={careerUrl}
+                  src={careerUrl}
+                  className="w-full border-0"
+                  style={{ height: 560 }}
+                  title="Career page"
+                  onLoad={() => {
+                    setTimeout(() => {
+                      try {
+                        const f = document.querySelector("iframe[title='Career page']") as HTMLIFrameElement;
+                        if (f && (!f.contentDocument || !f.contentDocument.body.innerHTML)) {
+                          setIframeBlocked(true);
+                        }
+                      } catch { /* cross-origin — blocked but load fired; leave as-is */ }
+                    }, 1000);
+                  }}
+                  onError={() => setIframeBlocked(true)}
+                />
+              )}
 
-                {!resolving && (!careerUrl || iframeBlocked) && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-surface px-8 text-center">
-                    <div className="w-10 h-10 rounded-full bg-surface-secondary flex items-center justify-center">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-dimmed">
-                        <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M14 4h6m0 0v6m0-6L10 14" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-dm-sans font-medium text-text-primary mb-1">
-                        {iframeBlocked ? "This site can't be embedded" : "Career page not found"}
-                      </p>
-                      <p className="text-xs text-text-dimmed font-dm-sans mb-4">
-                        {iframeBlocked
-                          ? "The company's careers site blocks embedding. Open it in a new tab to apply."
-                          : "Use the Google search above to find the career page."}
-                      </p>
-                    </div>
-                    {(careerUrl || googleUrl) && (
-                      <a
-                        href={careerUrl ?? googleUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
-                      >
-                        Open career page ↗
-                      </a>
-                    )}
+              {/* Compact fallback when blocked or no URL */}
+              {!resolving && (!careerUrl || iframeBlocked) && (
+                <div className="flex flex-col items-center gap-4 py-10 px-8 text-center bg-surface">
+                  <div className="w-10 h-10 rounded-full bg-surface-secondary flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-dimmed">
+                      <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M14 4h6m0 0v6m0-6L10 14" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <p className="text-sm font-dm-sans font-medium text-text-primary mb-1">
+                      {iframeBlocked ? "This site can't be embedded" : "Career page not found"}
+                    </p>
+                    <p className="text-xs text-text-dimmed font-dm-sans">
+                      {iframeBlocked
+                        ? "The company blocks embedding — open in a new tab to apply."
+                        : "Use the Google search above to find the career page."}
+                    </p>
+                  </div>
+                  {(careerUrl || googleUrl) && (
+                    <a
+                      href={careerUrl ?? googleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
+                    >
+                      Open career page ↗
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
