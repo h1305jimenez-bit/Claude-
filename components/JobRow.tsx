@@ -55,17 +55,17 @@ export function JobRow({ job }: JobRowProps) {
             )}
             {job.steps > 0 && (
               <span className="text-xs text-text-dimmed font-dm-sans">
-                {job.steps} steps
+                {job.steps} steps to apply
               </span>
             )}
             {job.estimated_time && (
               <span className="text-xs text-text-dimmed font-dm-sans">
-                ~{job.estimated_time}
+                ~{job.estimated_time} to complete
               </span>
             )}
             {daysAgo(job.posted_date) && (
               <span className="text-xs text-text-dimmed font-dm-sans ml-auto">
-                {daysAgo(job.posted_date)}
+                Posted {daysAgo(job.posted_date)}
               </span>
             )}
           </div>
