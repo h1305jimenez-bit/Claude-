@@ -8,13 +8,6 @@ import { RefreshMeter } from "@/components/RefreshMeter";
 import { AddJobModal } from "@/components/AddJobModal";
 import type { Job, User } from "@/lib/types";
 
-const STATUS_GROUPS = [
-  { key: "new", label: "New" },
-  { key: "open", label: "Open" },
-  { key: "closing", label: "Closing soon" },
-  { key: "closed", label: "Closed" },
-] as const;
-
 export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -43,7 +36,7 @@ export default function DashboardPage() {
         fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*&limit=1`, {
           headers: { "Authorization": `Bearer ${token}`, "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
         }).then(r => r.json()) as Promise<User[]>,
-        supabase.from("jobs").select("*").eq("user_id", userId).neq("status", "stale").order("score", { ascending: false }),
+        supabase.from("jobs").select("*").eq("user_id", userId).eq("status", "new").order("score", { ascending: false }),
       ]);
 
       const userData = userRes as User[];
@@ -77,7 +70,8 @@ export default function DashboardPage() {
           })()
         : 0;
 
-      if ((!hasJobs || isStale) && !autoRefreshDone.current && refreshesLeft > 0) {
+      const newJobs = jobsRes.data?.filter(j => j.status === "new") ?? [];
+      if ((!newJobs.length || isStale) && !autoRefreshDone.current && refreshesLeft > 0) {
         autoRefreshDone.current = true;
         await triggerRefresh(false, token);
       }
@@ -85,6 +79,21 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }, [supabase]);
+
+  const trackJob = async (jobId: string) => {
+    // Optimistically remove from dashboard (it moves to tracker)
+    setJobs(prev => prev.filter(j => j.id !== jobId));
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify({ status: "open" }),
+    });
+  };
 
   const runDebug = async () => {
     if (!accessToken) { setDebugInfo("No access token yet — reload page first"); return; }
@@ -183,11 +192,6 @@ export default function DashboardPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const grouped = STATUS_GROUPS.map((group) => ({
-    ...group,
-    jobs: jobs.filter((j) => j.status === group.key),
-  }));
-
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -248,26 +252,20 @@ export default function DashboardPage() {
             </div>
           ) : jobs.length === 0 ? (
             <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
-              <p className="font-dm-sans text-text-dimmed text-sm">
-                {refreshing ? "Fetching jobs..." : "No jobs yet. Click Refresh to fetch matches."}
+              <p className="font-dm-sans text-text-dimmed text-sm mb-1">
+                {refreshing ? "Fetching jobs..." : "No new matches right now."}
               </p>
+              {!refreshing && (
+                <p className="font-dm-sans text-text-dimmed text-xs">
+                  Hit Refresh to fetch new matches, or check the Tracker for jobs you&apos;re already pursuing.
+                </p>
+              )}
             </div>
           ) : (
-            <div className="space-y-8">
-              {grouped.map((group) =>
-                group.jobs.length > 0 ? (
-                  <div key={group.key}>
-                    <h2 className="font-dm-sans text-xs text-text-dimmed font-medium uppercase tracking-wider mb-3">
-                      {group.label} · {group.jobs.length}
-                    </h2>
-                    <div className="space-y-2">
-                      {group.jobs.map((job) => (
-                        <JobRow key={job.id} job={job} />
-                      ))}
-                    </div>
-                  </div>
-                ) : null
-              )}
+            <div className="space-y-2">
+              {jobs.map((job) => (
+                <JobRow key={job.id} job={job} onTrack={trackJob} />
+              ))}
             </div>
           )}
         </main>

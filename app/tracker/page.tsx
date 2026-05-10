@@ -121,9 +121,9 @@ export default function TrackerPage() {
           </div>
         ) : jobs.length === 0 ? (
           <div className="border border-border rounded-[8px] p-12 text-center bg-surface">
-            <p className="text-text-dimmed font-dm-sans text-sm mb-2">No jobs in your pipeline yet.</p>
+            <p className="text-text-dimmed font-dm-sans text-sm mb-2">No tracked jobs yet.</p>
             <p className="text-text-dimmed font-dm-sans text-xs">
-              From the Dashboard, click a job card and change its status to move it here.
+              Go to the Dashboard and click <span className="font-medium text-text-primary">+ Track</span> on any job you want to pursue.
             </p>
           </div>
         ) : (
