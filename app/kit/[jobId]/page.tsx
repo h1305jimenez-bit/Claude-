@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
@@ -37,6 +37,23 @@ export default function KitPage() {
   const [insightsError, setInsightsError] = useState("");
 
   const supabase = createBrowserSupabase();
+
+  // Decode HTML entities and convert block/line tags to newlines using the browser parser
+  const cleanDescription = useMemo(() => {
+    if (!job?.description) return "";
+    const raw = job.description
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(?:p|div|li|h[1-6])>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "\n• ");
+    if (typeof document !== "undefined") {
+      const el = document.createElement("div");
+      el.innerHTML = raw;
+      return (el.textContent ?? el.innerText ?? "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+    return raw.replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  }, [job?.description]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -216,26 +233,22 @@ export default function KitPage() {
                   <p className="text-sm font-dm-sans text-text-primary">{job.tip}</p>
                 </div>
               )}
-              {job.description && (() => {
-                const clean = job.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-                const isLong = clean.length > 500;
-                return (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-2">Job description</p>
-                    <p className={`text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line ${!showFullDesc && isLong ? "line-clamp-5" : ""}`}>
-                      {clean}
-                    </p>
-                    {isLong && (
-                      <button
-                        onClick={() => setShowFullDesc(v => !v)}
-                        className="mt-2 text-xs text-text-dimmed hover:text-text-primary font-dm-sans transition-all duration-[150ms]"
-                      >
-                        {showFullDesc ? "Show less ↑" : "Show more ↓"}
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
+              {cleanDescription && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-2">Job description</p>
+                  <p className={`text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line ${!showFullDesc && cleanDescription.length > 500 ? "line-clamp-5" : ""}`}>
+                    {cleanDescription}
+                  </p>
+                  {cleanDescription.length > 500 && (
+                    <button
+                      onClick={() => setShowFullDesc(v => !v)}
+                      className="mt-2 text-xs text-text-dimmed hover:text-text-primary font-dm-sans transition-all duration-[150ms]"
+                    >
+                      {showFullDesc ? "Show less ↑" : "Show more ↓"}
+                    </button>
+                  )}
+                </div>
+              )}
             </KitPanel>
 
             {job.application_flow && job.application_flow.length > 0 && (
