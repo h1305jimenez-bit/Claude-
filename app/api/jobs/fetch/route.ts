@@ -320,7 +320,7 @@ JSON format:
       success: true,
       count: scoredJobs.length,
       remaining: remaining - 1,
-      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map(j => ({ company: j.company, url: j.url })) },
+      debug: { searchQuery, adzunaCount, adzunaError, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
