@@ -131,10 +131,12 @@ export async function GET(req: NextRequest) {
   const resolved = await resolveAdzunaUrl(url);
   if (resolved) return NextResponse.redirect(resolved);
 
-  // Final fallback: Google search scoped to the job + country so the right
-  // regional posting appears first
+  // Final fallback: DuckDuckGo "I'm Feeling Lucky" lands on the first result —
+  // usually the exact job posting on the company's ATS or careers page.
   const country = location.split(",").pop()?.trim() ?? "";
-  const query = [company, role, country, "careers apply"].filter(Boolean).join(" ");
-  const fallback = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  const query = company && role
+    ? `"${company}" "${role}"${country ? ` "${country}"` : ""} careers apply`
+    : [company, role, country, "careers apply"].filter(Boolean).join(" ");
+  const fallback = `https://duckduckgo.com/?q=!ducky+${encodeURIComponent(query)}`;
   return NextResponse.redirect(fallback);
 }

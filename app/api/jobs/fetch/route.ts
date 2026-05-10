@@ -255,10 +255,18 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
           } catch { return false; }
         })();
         const finalUrl = (isValidCareerUrl && claudeUrl) ? claudeUrl : (resolvedUrlMap.get(job.id) ?? job.redirect_url);
+
+        // If the URL is still on Adzuna after all resolution attempts, build a targeted
+        // DuckDuckGo "I'm Feeling Lucky" URL so the Apply button goes straight to the
+        // company career page via search — no Adzuna intermediary.
+        const company = job.company?.display_name || "Unknown";
+        const applyUrl = finalUrl.includes("adzuna.com")
+          ? `https://duckduckgo.com/?q=!ducky+${encodeURIComponent(`"${company}" "${job.title}" careers apply`)}`
+          : finalUrl;
         scoredJobs.push({
           user_id: userId,
           adzuna_id: job.id,
-          company: job.company?.display_name || "Unknown",
+          company,
           role: job.title,
           location: job.location?.display_name || "",
           score: parsed.score,
@@ -269,7 +277,7 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
           estimated_time: `${parsed.estimatedMinutes} min`,
           status: "new",
           kit_ready: false,
-          url: finalUrl,
+          url: applyUrl,
           description: job.description || "",
           posted_date: job.created,
         });

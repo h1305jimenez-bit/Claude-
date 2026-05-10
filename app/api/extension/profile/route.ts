@@ -6,13 +6,18 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? "";
 
 function getUserFromToken(token: string): { userId: string; email: string } | null {
-  const [, raw] = token.split(".");
-  if (!raw) return null;
-  const padded = raw + "=".repeat((4 - raw.length % 4) % 4);
   try {
-    const p = JSON.parse(Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()) as { sub?: string; email?: string };
-    if (!p.sub) return null;
-    return { userId: p.sub, email: p.email ?? "" };
+    // Trim whitespace/newlines that can sneak in via clipboard copy
+    const parts = token.trim().split(".");
+    if (parts.length < 2) return null;
+    const raw = parts[1];
+    const padded = raw + "=".repeat((4 - raw.length % 4) % 4);
+    const decoded = Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8");
+    const p = JSON.parse(decoded) as Record<string, unknown>;
+    // Supabase uses "sub"; fall back to alternative claim names
+    const userId = (p.sub ?? p.user_id ?? p.userId) as string | undefined;
+    if (!userId) return null;
+    return { userId, email: (p.email as string) ?? "" };
   } catch { return null; }
 }
 
@@ -30,22 +35,22 @@ export async function GET(req: NextRequest) {
   const jwt = getUserFromToken(token);
   if (!jwt) return NextResponse.json({ error: "Invalid token" }, { status: 401, headers });
 
-  // Use service key for the lookup so RLS on the users table doesn't block it.
-  // The JWT has already been verified above — we know who the user is.
-  const lookupKey = SERVICE_KEY || ANON_KEY;
+  // Use user's own token for Supabase RLS, fall back to service key
+  const authKey = SERVICE_KEY || token;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/users?id=eq.${jwt.userId}&select=*&limit=1`,
-    { headers: { "Authorization": `Bearer ${lookupKey}`, "apikey": lookupKey } }
+    { headers: { "Authorization": `Bearer ${authKey}`, "apikey": SERVICE_KEY || ANON_KEY } }
   );
 
   if (!res.ok) {
     const detail = await res.text();
-    console.error("extension/profile: supabase error", res.status, detail);
+    console.error("extension/profile supabase error:", res.status, detail);
     return NextResponse.json({ error: "Database error" }, { status: 502, headers });
   }
 
-  const rows = await res.json() as User[];
-  const user = rows[0];
+  const body = await res.json();
+  const rows = Array.isArray(body) ? body : [];
+  const user = rows[0] as User | undefined;
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404, headers });
 
   return NextResponse.json({
