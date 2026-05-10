@@ -4,7 +4,7 @@ import { fetchAdzunaJobs } from "@/lib/adzuna";
 import { checkRefreshLimit } from "@/lib/gating";
 import type { User } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -48,9 +48,7 @@ export async function POST(req: NextRequest) {
       ? user.target_location.split(",").map((l: string) => l.trim()).filter(Boolean)
       : [""];
     let adzunaError = "";
-    let searchQuery = roles[0] || user.target_role;
-    const seenIds = new Set<string>();
-    let adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
+    const searchQuery = roles.slice(0, 2).join(", ") + (locations[0] ? ` in ${locations.slice(0, 2).join(", ")}` : "");
 
     // Simplify a role title to its last 2 meaningful words (fallback for niche titles)
     function simplifyRole(role: string): string | null {
@@ -59,39 +57,38 @@ export async function POST(req: NextRequest) {
       return words.slice(-2).join(" ");
     }
 
-    // Fetch for each role+location combination and combine
-    for (const role of roles) {
-      for (const loc of locations) {
-        if (adzunaJobs.length >= 50) break;
+    // Fetch ALL role×location combinations in parallel so no combination is starved
+    const combos = roles.flatMap(role => locations.map(loc => ({ role, loc })));
+    const comboResults = await Promise.allSettled(
+      combos.map(async ({ role, loc }) => {
         const isWorldwide = !loc || /remote|worldwide/i.test(loc);
-        try {
-          let results = await fetchAdzunaJobs(role, loc);
-          // Fallback 1: niche title → try simplified 2-word version, same location
-          if (results.length === 0) {
-            const simplified = simplifyRole(role);
-            if (simplified) results = await fetchAdzunaJobs(simplified, loc);
-          }
-          // Fallback 2 & 3: only go worldwide when no specific location is set
-          if (results.length === 0 && isWorldwide) {
-            results = await fetchAdzunaJobs(role, "");
-          }
-          if (results.length === 0 && isWorldwide) {
-            const simplified = simplifyRole(role);
-            if (simplified) results = await fetchAdzunaJobs(simplified, "");
-          }
-          for (const job of results) {
-            if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
-            if (adzunaJobs.length >= 50) break;
-          }
-          searchQuery = `${role}${loc ? ` in ${loc}` : ""}`;
-        } catch (e) {
-          adzunaError = (e as { message?: string }).message ?? String(e);
+        let results = await fetchAdzunaJobs(role, loc);
+        if (results.length === 0) {
+          const simplified = simplifyRole(role);
+          if (simplified) results = await fetchAdzunaJobs(simplified, loc);
         }
+        if (results.length === 0 && isWorldwide) results = await fetchAdzunaJobs(role, "");
+        if (results.length === 0 && isWorldwide) {
+          const simplified = simplifyRole(role);
+          if (simplified) results = await fetchAdzunaJobs(simplified, "");
+        }
+        return results;
+      })
+    );
+
+    // Merge all results, deduplicate
+    const seenIds = new Set<string>();
+    const adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
+    for (const result of comboResults) {
+      if (result.status === "rejected") { adzunaError = result.reason?.message ?? String(result.reason); continue; }
+      for (const job of result.value) {
+        if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
       }
     }
 
     const adzunaCount = adzunaJobs.length;
-    const jobsToScore = adzunaJobs.slice(0, 20);
+    // Score up to 40 jobs — all in parallel with Haiku so latency stays low
+    const jobsToScore = adzunaJobs.slice(0, 40);
 
     // Resolve Adzuna tracking URLs to actual company career page URLs.
     // Adzuna's redirect_url lands on their own job detail page; we parse that page's HTML
