@@ -62,21 +62,8 @@ async function fetchProfile(token, apiUrl) {
     throw new Error("Token rejected. Go to Profile → Copy extension token and paste a fresh one.");
   }
   if (res.status === 404) {
-    // Account not found — auto-attempt to create/fix the user record, then retry once
-    try {
-      await fetch(`${apiUrl}/api/fix/user-id`, {
-        method: "POST",
-        headers: { "x-access-token": token },
-      });
-    } catch { /* ignore fix errors */ }
-    // Retry profile lookup after fix
-    try {
-      const retry = await fetch(`${apiUrl}/api/extension/profile`, {
-        headers: { "x-access-token": token },
-      });
-      if (retry.ok) return retry.json();
-    } catch { /* fall through to error */ }
-    throw new Error("Account not found. Go to Profile → Copy extension token and paste a fresh one.");
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Account not found. Open ApplyPilot, log in, then try again.");
   }
   if (!res.ok) throw new Error(`Server error (${res.status}). Try again in a moment.`);
   return res.json();

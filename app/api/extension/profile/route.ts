@@ -5,41 +5,30 @@ const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/,
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? "";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "x-access-token, content-type",
+};
+
 function getUserFromToken(token: string): { userId: string; email: string } | null {
   try {
-    // Trim whitespace/newlines that can sneak in via clipboard copy
     const parts = token.trim().split(".");
     if (parts.length < 2) return null;
     const raw = parts[1];
     const padded = raw + "=".repeat((4 - raw.length % 4) % 4);
     const decoded = Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8");
     const p = JSON.parse(decoded) as Record<string, unknown>;
-    // Supabase uses "sub"; fall back to alternative claim names
     const userId = (p.sub ?? p.user_id ?? p.userId) as string | undefined;
     if (!userId) return null;
-    return { userId, email: (p.email as string) ?? "" };
+    // Email may live at top-level or inside user_metadata / app_metadata
+    const meta = (p.user_metadata ?? p.app_metadata ?? {}) as Record<string, unknown>;
+    const email = ((p.email ?? meta.email ?? "") as string).trim();
+    return { userId, email };
   } catch { return null; }
 }
 
-export async function GET(req: NextRequest) {
-  // Allow Chrome extension cross-origin requests
-  const origin = req.headers.get("origin") ?? "";
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Origin": origin || "*",
-    "Access-Control-Allow-Headers": "x-access-token, content-type",
-  };
-
-  const token = req.headers.get("x-access-token");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
-
-  const jwt = getUserFromToken(token);
-  if (!jwt) return NextResponse.json({ error: "Invalid token" }, { status: 401, headers });
-
-  // Use service key to bypass RLS; fall back to user's own token
-  const authKey = SERVICE_KEY || token;
-  const apiKey = SERVICE_KEY || ANON_KEY;
-
-  async function fetchUser(filter: string): Promise<User | null> {
+async function sbFetch(filter: string, authKey: string, apiKey: string): Promise<User | null> {
+  try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/users?${filter}&select=*&limit=1`,
       { headers: { "Authorization": `Bearer ${authKey}`, "apikey": apiKey } }
@@ -48,17 +37,66 @@ export async function GET(req: NextRequest) {
     const body = await res.json();
     const rows = Array.isArray(body) ? body : [];
     return (rows[0] as User) ?? null;
-  }
+  } catch { return null; }
+}
 
-  // Primary lookup by UUID (the normal path)
-  let user = await fetchUser(`id=eq.${jwt.userId}`);
+export async function GET(req: NextRequest) {
+  const token = req.headers.get("x-access-token");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS });
 
-  // Fallback: some accounts have a mismatched id — try email lookup
+  const jwt = getUserFromToken(token);
+  if (!jwt) return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: CORS });
+
+  const svcKey = SERVICE_KEY || token;
+  const apiKey = SERVICE_KEY || ANON_KEY;
+
+  // 1. Normal path: lookup by UUID
+  let user = await sbFetch(`id=eq.${jwt.userId}`, svcKey, apiKey);
+
+  // 2. ID mismatch fallback: lookup by email (only works if service key is set or RLS allows email lookup)
   if (!user && jwt.email) {
-    user = await fetchUser(`email=eq.${encodeURIComponent(jwt.email)}`);
+    user = await sbFetch(`email=eq.${encodeURIComponent(jwt.email)}`, svcKey, apiKey);
+
+    // 3. If found by email but ID is wrong, repair it in-place so next lookup works normally
+    if (user && user.id !== jwt.userId && SERVICE_KEY) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(jwt.email)}`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${SERVICE_KEY}`,
+            "apikey": SERVICE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({ id: jwt.userId }),
+        });
+      } catch { /* non-critical — return user anyway */ }
+    }
   }
 
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404, headers });
+  // 4. No row at all + service key: create a minimal profile so the extension can connect
+  if (!user && SERVICE_KEY && jwt.email) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${SERVICE_KEY}`,
+          "apikey": SERVICE_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({ id: jwt.userId, email: jwt.email, plan: "free", name: "" }),
+      });
+      user = await sbFetch(`id=eq.${jwt.userId}`, SERVICE_KEY, SERVICE_KEY);
+    } catch { /* fall through */ }
+  }
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "User not found. Open ApplyPilot in a tab, log in, then try connecting again." },
+      { status: 404, headers: CORS }
+    );
+  }
 
   return NextResponse.json({
     user: {
@@ -75,16 +113,15 @@ export async function GET(req: NextRequest) {
       cv_url: user.cv_url,
       cv_text: (user.cv_text ?? "").slice(0, 4000),
     },
-  }, { headers });
+  }, { headers: CORS });
 }
 
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      ...CORS,
       "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "x-access-token, content-type",
     },
   });
 }
