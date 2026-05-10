@@ -93,9 +93,27 @@ export async function POST(req: NextRequest) {
     const adzunaCount = adzunaJobs.length;
     const jobsToScore = adzunaJobs.slice(0, 8);
 
-    // Resolve Adzuna tracking URLs to actual company career page URLs
-    // Uses GET+redirect follow; filters out any URL that stays on adzuna.com
-    async function resolveUrl(url: string): Promise<string> {
+    // Resolve Adzuna tracking URLs to actual company career page URLs.
+    // Strategy: GET+redirect follow first; if still on adzuna.com, scan description for known ATS URLs.
+    const ATS_DOMAINS = [
+      "greenhouse.io", "lever.co", "myworkdayjobs.com", "linkedin.com/jobs",
+      "smartrecruiters.com", "bamboohr.com", "workable.com", "icims.com",
+      "taleo.net", "successfactors.com", "jobvite.com", "ashbyhq.com",
+      "recruitee.com", "jazz.co", "breezy.hr", "applytojob.com",
+      "jobscore.com", "pinpointhq.com", "rippling.com/jobs",
+    ];
+
+    function extractAtsUrl(description: string): string | null {
+      const urlPattern = /https?:\/\/[^\s"'<>]+/g;
+      const urls = description.match(urlPattern) ?? [];
+      for (const u of urls) {
+        const clean = u.replace(/[).,;]+$/, "");
+        if (ATS_DOMAINS.some(d => clean.includes(d))) return clean;
+      }
+      return null;
+    }
+
+    async function resolveUrl(url: string, description?: string): Promise<string> {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
       try {
@@ -107,11 +125,17 @@ export async function POST(req: NextRequest) {
         });
         clearTimeout(timer);
         const final = res.url;
-        return (final && !final.includes("adzuna.com") && final !== url) ? final : url;
-      } catch { return url; }
+        if (final && !final.includes("adzuna.com") && final !== url) return final;
+      } catch { /* fall through to description extraction */ }
       finally { clearTimeout(timer); }
+      // Fallback: extract a known ATS URL from the job description
+      if (description) {
+        const atsUrl = extractAtsUrl(description);
+        if (atsUrl) return atsUrl;
+      }
+      return url;
     }
-    const resolvedUrls = await Promise.all(jobsToScore.map(j => resolveUrl(j.redirect_url)));
+    const resolvedUrls = await Promise.all(jobsToScore.map(j => resolveUrl(j.redirect_url, j.description)));
     const resolvedUrlMap = new Map(jobsToScore.map((j, i) => [j.id, resolvedUrls[i]]));
 
     const candidateContext = `Role: ${user.target_role}
