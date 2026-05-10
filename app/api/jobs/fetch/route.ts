@@ -198,11 +198,11 @@ Title: ${job.title}
 Description: ${(job.description || "").slice(0, 800)}
 
 JSON format:
-{"score":<0-100>,"rationale":"<one sentence>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"applicationFlow":[{"name":"<step>","detail":"<what>","fields":["<field>"]}],"tip":"<one tip>","careerUrl":"<direct URL to the company job posting or careers page — extract from description if present, or use known career page (e.g. jobs.amazon.com, careers.google.com, metacareers.com, careers.microsoft.com, jobs.apple.com). Empty string if truly unknown>"}`;
+{"score":<0-100>,"rationale":"<3 sentences: (1) overall match verdict, (2) specific skills or experience from the candidate's background that directly align with this role, (3) one potential gap or caveat to be aware of>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"applicationFlow":[{"name":"<step>","detail":"<what>","fields":["<field>"]}],"tip":"<one actionable tip for this specific application>","careerUrl":"<direct URL to the company job posting or careers page — extract from description if present, or use known career page (e.g. jobs.amazon.com, careers.google.com, metacareers.com, careers.microsoft.com, jobs.apple.com). Empty string if truly unknown>"}`;
 
         const response = await anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 600,
+          max_tokens: 900,
           messages: [{ role: "user", content: scoringPrompt }],
         });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
@@ -31,36 +31,12 @@ export default function KitPage() {
   const [tab, setTab] = useState<TabKey>("preview");
   const [generating, setGenerating] = useState(false);
   const [generatingInsights, setGeneratingInsights] = useState(false);
-  const [showFullDesc, setShowFullDesc] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [insightsError, setInsightsError] = useState("");
 
   const supabase = createBrowserSupabase();
 
-  // Strip HTML and decode entities using the browser parser; preserve paragraph breaks
-  const cleanDescription = useMemo(() => {
-    if (!job?.description) return "";
-    // Pre-convert block/line elements to newlines before handing to the DOM parser
-    const raw = job.description
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/(?:p|div|h[1-6])>/gi, "\n\n")
-      .replace(/<\/li>/gi, "\n")
-      .replace(/<li[^>]*>/gi, "• ");
-    if (typeof document !== "undefined") {
-      const el = document.createElement("div");
-      el.innerHTML = raw;
-      return (el.textContent ?? el.innerText ?? "")
-        .replace(/[ \t]+/g, " ")        // collapse horizontal whitespace only
-        .replace(/\n{3,}/g, "\n\n")     // max two consecutive newlines
-        .trim();
-    }
-    return raw
-      .replace(/<[^>]+>/g, "")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-  }, [job?.description]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -232,28 +208,35 @@ export default function KitPage() {
         {/* Tab content */}
         {tab === "preview" && (
           <div className="space-y-4">
-            <KitPanel title="Job overview">
-              <p className="text-sm text-text-dimmed font-dm-sans leading-relaxed">{job.score_rationale}</p>
+            <KitPanel title="Why you're a match">
+              {job.score_rationale ? (
+                <div className="space-y-2">
+                  {job.score_rationale.split(/(?<=\.)\s+/).filter(Boolean).map((sentence, i) => (
+                    <p key={i} className="text-sm font-dm-sans leading-relaxed text-text-dimmed">
+                      {sentence.trim()}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-text-dimmed font-dm-sans">No analysis available.</p>
+              )}
               {job.tip && (
-                <div className="mt-3 border border-border rounded-[8px] p-3 bg-surface-secondary">
-                  <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-0.5">Tip</p>
+                <div className="mt-4 border border-border rounded-[8px] p-3 bg-surface-secondary">
+                  <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-0.5">Application tip</p>
                   <p className="text-sm font-dm-sans text-text-primary">{job.tip}</p>
                 </div>
               )}
-              {cleanDescription && (
-                <div className="mt-4 border-t border-border pt-4">
-                  <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-2">Job description</p>
-                  <p className={`text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line ${!showFullDesc ? "line-clamp-4" : ""}`}>
-                    {cleanDescription}
-                  </p>
-                  <button
-                    onClick={() => setShowFullDesc(v => !v)}
-                    className="mt-2 text-xs text-text-dimmed hover:text-text-primary font-dm-sans transition-all duration-[150ms]"
-                  >
-                    {showFullDesc ? "Show less ↑" : "Show more ↓"}
-                  </button>
-                </div>
-              )}
+              <p className="mt-4 text-xs text-text-dimmed font-dm-sans">
+                For the full job description,{" "}
+                <a
+                  href={`/api/jobs/go?url=${encodeURIComponent(job.url)}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.role)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-text-primary transition-all duration-[150ms]"
+                >
+                  view the job posting ↗
+                </a>
+              </p>
             </KitPanel>
 
             {job.application_flow && job.application_flow.length > 0 && (
