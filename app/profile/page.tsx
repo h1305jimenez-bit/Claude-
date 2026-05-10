@@ -25,6 +25,8 @@ export default function ProfilePage() {
   const [roleInput, setRoleInput] = useState("");
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [locationInput, setLocationInput] = useState("");
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [companyInput, setCompanyInput] = useState("");
   const [preferences, setPreferences] = useState({
     name: "",
     phone: "",
@@ -32,6 +34,7 @@ export default function ProfilePage() {
     education: "",
     target_role: "",
     target_location: "",
+    target_companies: "",
     seniority: "",
     salary_expectation: "",
     work_authorization: "",
@@ -62,6 +65,8 @@ export default function ProfilePage() {
         setSelectedRoles(roles);
         const locs = u.target_location ? u.target_location.split(",").map((l: string) => l.trim()).filter(Boolean) : [];
         setSelectedLocations(locs);
+        const companies = u.target_companies ? u.target_companies.split(",").map((c: string) => c.trim()).filter(Boolean) : [];
+        setSelectedCompanies(companies);
         setPreferences({
           name: u.name || "",
           phone: u.phone || "",
@@ -69,6 +74,7 @@ export default function ProfilePage() {
           education: u.education || "",
           target_role: u.target_role || "",
           target_location: u.target_location || "",
+          target_companies: u.target_companies || "",
           seniority: u.seniority || "",
           salary_expectation: u.salary_expectation || "",
           work_authorization: u.work_authorization || "",
@@ -472,6 +478,87 @@ export default function ProfilePage() {
                   }
                   setLocationInput("");
                 }} disabled={!locationInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Target companies — multi-select */}
+            <div>
+              <label className="block text-xs text-text-dimmed font-dm-sans mb-2">Target companies</label>
+              <p className="text-xs text-text-dimmed font-dm-sans mb-2 opacity-70">
+                Jobs from these companies will be prioritised when scoring matches.
+              </p>
+
+              {selectedCompanies.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedCompanies.map((co) => (
+                    <span key={co} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
+                      {co}
+                      <button onClick={() => {
+                        const updated = selectedCompanies.filter(c => c !== co);
+                        setSelectedCompanies(updated);
+                        setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                      }} className="opacity-60 hover:opacity-100">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 mb-2">
+                {[
+                  "Google", "Microsoft", "Apple", "Meta", "Amazon", "Netflix",
+                  "Salesforce", "Adobe", "Atlassian", "Shopify", "Stripe", "Revolut",
+                  "McKinsey", "BCG", "Bain", "Deloitte", "Accenture",
+                  "Goldman Sachs", "JPMorgan", "BlackRock",
+                  "Spotify", "Airbnb", "Uber", "LinkedIn", "HubSpot",
+                ].map((co) => {
+                  const selected = selectedCompanies.includes(co);
+                  return (
+                    <button key={co} onClick={() => {
+                      const updated = selected ? selectedCompanies.filter(c => c !== co) : [...selectedCompanies, co];
+                      setSelectedCompanies(updated);
+                      setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                    }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
+                      {selected ? "✓ " : ""}{co}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Add a company..."
+                  value={companyInput}
+                  onChange={(e) => setCompanyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && companyInput.trim()) {
+                      const val = companyInput.trim();
+                      if (!selectedCompanies.includes(val)) {
+                        const updated = [...selectedCompanies, val];
+                        setSelectedCompanies(updated);
+                        setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                      }
+                      setCompanyInput("");
+                      e.preventDefault();
+                    }
+                  }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
+                <button onClick={() => {
+                  const val = companyInput.trim();
+                  if (val && !selectedCompanies.includes(val)) {
+                    const updated = [...selectedCompanies, val];
+                    setSelectedCompanies(updated);
+                    setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                  }
+                  setCompanyInput("");
+                }} disabled={!companyInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
                   Add
                 </button>
               </div>

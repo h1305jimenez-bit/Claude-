@@ -31,6 +31,7 @@ export default function KitPage() {
   const [tab, setTab] = useState<TabKey>("preview");
   const [generating, setGenerating] = useState(false);
   const [generatingInsights, setGeneratingInsights] = useState(false);
+  const [showFullDesc, setShowFullDesc] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [insightsError, setInsightsError] = useState("");
@@ -215,6 +216,26 @@ export default function KitPage() {
                   <p className="text-sm font-dm-sans text-text-primary">{job.tip}</p>
                 </div>
               )}
+              {job.description && (() => {
+                const clean = job.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                const isLong = clean.length > 500;
+                return (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <p className="text-xs text-text-dimmed font-dm-sans font-medium mb-2">Job description</p>
+                    <p className={`text-sm text-text-dimmed font-dm-sans leading-relaxed whitespace-pre-line ${!showFullDesc && isLong ? "line-clamp-5" : ""}`}>
+                      {clean}
+                    </p>
+                    {isLong && (
+                      <button
+                        onClick={() => setShowFullDesc(v => !v)}
+                        className="mt-2 text-xs text-text-dimmed hover:text-text-primary font-dm-sans transition-all duration-[150ms]"
+                      >
+                        {showFullDesc ? "Show less ↑" : "Show more ↓"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </KitPanel>
 
             {job.application_flow && job.application_flow.length > 0 && (

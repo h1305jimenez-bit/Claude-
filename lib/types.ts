@@ -10,6 +10,7 @@ export interface User {
   seniority: string;
   salary_expectation: string;
   work_authorization: string;
+  target_companies: string;
   cv_url: string;
   cv_text: string;
   plan: "free" | "paid";
