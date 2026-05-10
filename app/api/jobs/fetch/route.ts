@@ -181,46 +181,70 @@ Location: ${user.target_location || "Any"}
 Seniority: ${user.seniority || "Not specified"}
 Background: ${(user.cv_text || "").slice(0, 1500)}`;
 
-    // Score all jobs in parallel using Haiku for speed
-    const results = await Promise.allSettled(
-      jobsToScore.map(async (job) => {
-        const scoringPrompt = `Score this job for this candidate. Return ONLY valid JSON.
+    // Batch scoring — 5 jobs per Claude call to stay under the 50 req/min rate limit.
+    // 40 jobs → 8 batches → 8 parallel calls (vs 40 before).
+    const BATCH_SIZE = 5;
+    const batches: (typeof jobsToScore)[] = [];
+    for (let i = 0; i < jobsToScore.length; i += BATCH_SIZE) {
+      batches.push(jobsToScore.slice(i, i + BATCH_SIZE));
+    }
+
+    const batchResults = await Promise.allSettled(
+      batches.map(async (batch) => {
+        const batchPrompt = `Score these ${batch.length} jobs for this candidate. Return ONLY a valid JSON array with exactly ${batch.length} objects in order.
 
 CANDIDATE:
 ${candidateContext}
 
-JOB:
+JOBS:
+${batch.map((job, i) => `--- JOB ${i + 1} ---
 Company: ${job.company?.display_name || "Unknown"}
 Title: ${job.title}
-Description: ${(job.description || "").slice(0, 800)}
+Description: ${(job.description || "").slice(0, 600)}`).join("\n\n")}
 
-JSON format:
-{"score":<0-100>,"rationale":"<3 sentences: (1) overall match verdict, (2) specific skills or experience from the candidate's background that directly align with this role, (3) one potential gap or caveat to be aware of>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"applicationFlow":[{"name":"<step>","detail":"<what>","fields":["<field>"]}],"tip":"<one actionable tip for this specific application>","careerUrl":"<direct URL to the company job posting or careers page — extract from description if present, or use known career page (e.g. jobs.amazon.com, careers.google.com, metacareers.com, careers.microsoft.com, jobs.apple.com). Empty string if truly unknown>"}`;
+Return a JSON array of ${batch.length} objects (same order as jobs above):
+[{"score":<0-100>,"rationale":"<3 sentences: (1) overall match, (2) specific skills that align, (3) gap or caveat>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"tip":"<one actionable tip>","careerUrl":"<direct URL to company job posting — extract from description or use known careers page. Empty string if unknown>"}]`;
 
         const response = await anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 900,
-          messages: [{ role: "user", content: scoringPrompt }],
+          max_tokens: 2000,
+          messages: [{ role: "user", content: batchPrompt }],
         });
 
         const content = response.content[0];
         if (content.type !== "text") throw new Error("no text");
-        const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("no json");
-        const parsed = JSON.parse(jsonMatch[0]) as {
+        const jsonMatch = content.text.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error("no json array");
+        const scores = JSON.parse(jsonMatch[0]) as Array<{
           score: number; rationale: string; portal: string; needsLogin: boolean;
-          steps: number; estimatedMinutes: number;
-          applicationFlow: { name: string; detail: string; fields: string[] }[];
-          tip: string;
-          careerUrl?: string;
-        };
+          steps: number; estimatedMinutes: number; tip: string; careerUrl?: string;
+        }>;
+        return { batch, scores };
+      })
+    );
 
-        // Prefer Claude-extracted career URL, then Adzuna-resolved URL, then raw redirect
+    const scoredJobs: {
+      user_id: string; adzuna_id: string; company: string; role: string; location: string;
+      score: number; score_rationale: string; portal: string; needs_login: boolean;
+      steps: number; estimated_time: string; status: string; kit_ready: boolean;
+      url: string; description: string; posted_date: string;
+    }[] = [];
+    const scoringErrors: string[] = [];
+
+    for (const result of batchResults) {
+      if (result.status === "rejected") {
+        scoringErrors.push(result.reason?.message ?? String(result.reason));
+        continue;
+      }
+      const { batch, scores } = result.value;
+      for (let i = 0; i < batch.length; i++) {
+        const job = batch[i];
+        const parsed = scores[i];
+        if (!parsed) continue;
         const claudeUrl = parsed.careerUrl;
         const isValidCareerUrl = claudeUrl && claudeUrl.startsWith("http") && !claudeUrl.includes("adzuna.com");
         const finalUrl = isValidCareerUrl ? claudeUrl : (resolvedUrlMap.get(job.id) ?? job.redirect_url);
-
-        return {
+        scoredJobs.push({
           user_id: userId,
           adzuna_id: job.id,
           company: job.company?.display_name || "Unknown",
@@ -237,20 +261,9 @@ JSON format:
           url: finalUrl,
           description: job.description || "",
           posted_date: job.created,
-          // application_flow and tip require DB migration — stored separately once columns exist
-          ...(process.env.JOBS_EXTENDED_COLUMNS === "true" && {
-            application_flow: parsed.applicationFlow,
-            tip: parsed.tip,
-          }),
-        };
-      })
-    );
-
-    const scoredJobs = results
-      .filter((r): r is PromiseFulfilledResult<typeof results[0] extends PromiseFulfilledResult<infer T> ? T : never> => r.status === "fulfilled")
-      .map((r) => r.value);
-
-    const scoringErrors = results.filter(r => r.status === "rejected").map(r => (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason));
+        });
+      }
+    }
 
     // Clear stale 'new' jobs before inserting fresh ones.
     // Try DELETE with service key first; if that fails (RLS / key not set), fall back to
