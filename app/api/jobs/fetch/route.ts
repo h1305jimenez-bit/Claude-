@@ -242,7 +242,18 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
         const parsed = scores[i];
         if (!parsed) continue;
         const claudeUrl = parsed.careerUrl;
-        const isValidCareerUrl = claudeUrl && claudeUrl.startsWith("http") && !claudeUrl.includes("adzuna.com");
+        // Only trust Claude's URL if it points to a known ATS domain or a career-related path —
+        // prevents hallucinated or unrelated URLs (e.g. job aggregators, advertiser sites) from being stored.
+        const isValidCareerUrl = (() => {
+          if (!claudeUrl || !claudeUrl.startsWith("http") || claudeUrl.includes("adzuna.com")) return false;
+          try {
+            const u = new URL(claudeUrl);
+            if (ATS_DOMAINS.some(d => u.hostname.includes(d.split("/")[0]))) return true;
+            const atsParams = ["gh_jid", "gh_src", "lever-origin", "lever_source", "jid"];
+            if (atsParams.some(p => u.searchParams.has(p))) return true;
+            return /\/(jobs|careers|apply|job|position|vacancy|opening|hiring)\b/.test(u.pathname.toLowerCase());
+          } catch { return false; }
+        })();
         const finalUrl = isValidCareerUrl ? claudeUrl : (resolvedUrlMap.get(job.id) ?? job.redirect_url);
         scoredJobs.push({
           user_id: userId,

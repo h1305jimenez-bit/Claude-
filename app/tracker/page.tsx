@@ -96,8 +96,8 @@ export default function TrackerPage() {
     const now = new Date().toISOString();
 
     const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
-    if (!userId) { setUpdatingId(null); return; }
+    const token = sessionData.session?.access_token;
+    if (!token) { setUpdatingId(null); return; }
 
     // Optimistic UI update
     setJobs(prev => prev.map(j => j.id === jobId
@@ -105,16 +105,12 @@ export default function TrackerPage() {
       : j
     ));
 
-    // Try updating with closed_date; fall back to status-only if column doesn't exist yet
-    const { error } = await supabase
-      .from("jobs")
-      .update({ status, ...(status === "closed" ? { closed_date: now } : {}) })
-      .eq("id", jobId)
-      .eq("user_id", userId);
-
-    if (error) {
-      await supabase.from("jobs").update({ status }).eq("id", jobId).eq("user_id", userId);
-    }
+    // Server-side route bypasses RLS and handles closed_date gracefully
+    await fetch("/api/jobs/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-access-token": token },
+      body: JSON.stringify({ jobId, status }),
+    });
 
     setUpdatingId(null);
   };
