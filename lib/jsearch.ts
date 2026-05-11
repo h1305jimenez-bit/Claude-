@@ -23,9 +23,36 @@ interface RawJSearchJob {
   job_posted_at_datetime_utc?: string;
 }
 
-async function fetchPage(query: string, page: number): Promise<JSearchJob[]> {
+// ISO country codes for JSearch's country filter
+const COUNTRY_CODES: Record<string, string> = {
+  "chile": "cl", "argentina": "ar", "colombia": "co", "peru": "pe",
+  "venezuela": "ve", "ecuador": "ec", "bolivia": "bo", "paraguay": "py",
+  "uruguay": "uy", "brazil": "br", "mexico": "mx", "united states": "us",
+  "united kingdom": "gb", "canada": "ca", "australia": "au", "germany": "de",
+  "france": "fr", "spain": "es", "italy": "it", "netherlands": "nl",
+  "singapore": "sg", "india": "in", "japan": "jp", "china": "cn",
+  "south africa": "za", "nigeria": "ng", "kenya": "ke",
+};
+
+function getCountryCode(location: string): string | undefined {
+  const lower = location.toLowerCase().trim();
+  for (const [name, code] of Object.entries(COUNTRY_CODES)) {
+    if (lower.includes(name)) return code;
+  }
+  return undefined;
+}
+
+async function fetchPage(query: string, page: number, countryCode?: string): Promise<JSearchJob[]> {
+  const params: Record<string, string | number> = {
+    query,
+    page,
+    num_pages: 1,
+    date_posted: "month",
+  };
+  if (countryCode) params.country = countryCode;
+
   const response = await axios.get("https://jsearch.p.rapidapi.com/search-v2", {
-    params: { query, page, num_pages: 1, date_posted: "month" },
+    params,
     headers: {
       "X-RapidAPI-Key": process.env.JSEARCH_API_KEY!,
       "X-RapidAPI-Host": "jsearch.p.rapidapi.com",
@@ -55,12 +82,14 @@ export async function fetchJSearchJobs(
 ): Promise<JSearchJob[]> {
   if (!process.env.JSEARCH_API_KEY) return [];
 
-  const query = location ? `${role} in ${location}` : role;
+  // JSearch expects "job title jobs in city/country" format
+  const query = location ? `${role} jobs in ${location}` : `${role} jobs`;
+  const countryCode = location ? getCountryCode(location) : undefined;
 
   try {
     const [page1, page2] = await Promise.allSettled([
-      fetchPage(query, 1),
-      fetchPage(query, 2),
+      fetchPage(query, 1, countryCode),
+      fetchPage(query, 2, countryCode),
     ]);
 
     const combined: JSearchJob[] = [];
