@@ -3,6 +3,11 @@ import Link from "next/link";
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-background">
+      {/* Beta banner */}
+      <div className="bg-btn-bg text-btn-text text-center py-2 px-4 text-sm font-dm-sans">
+        Open Beta — all features are free while we&apos;re testing. No credit card needed.
+      </div>
+
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -100,34 +105,22 @@ export default function LandingPage() {
       <section className="border-t border-border py-20">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">Pricing</h2>
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <div className="border border-border rounded-[8px] p-8 bg-surface">
-              <h3 className="font-syne font-bold text-xl text-text-primary mb-2">Free</h3>
-              <p className="font-syne font-bold text-4xl text-text-primary mb-6">$0</p>
-              <ul className="space-y-2 text-sm text-text-dimmed font-dm-sans mb-8">
-                {["5 job refreshes per day", "Job scoring", "Application Preview", "Basic tracker"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <span>—</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth" className="block w-full text-center py-3 border border-border rounded-[8px] text-sm font-dm-sans hover:bg-surface-secondary transition-all duration-[150ms]">
-                Start free
-              </Link>
-            </div>
-            <div className="border border-btn-bg rounded-[8px] p-8 bg-btn-bg text-btn-text">
-              <h3 className="font-syne font-bold text-xl mb-2">Pro</h3>
-              <p className="font-syne font-bold text-4xl mb-1">$9</p>
-              <p className="text-sm opacity-60 font-dm-sans mb-6">per month</p>
+          <div className="max-w-sm mx-auto">
+            <div className="border-2 border-btn-bg rounded-[8px] p-8 bg-btn-bg text-btn-text">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-syne font-bold text-xl">Beta — Everything included</h3>
+              </div>
+              <p className="font-syne font-bold text-4xl mb-1">Free</p>
+              <p className="text-sm opacity-60 font-dm-sans mb-6">for all beta testers</p>
               <ul className="space-y-2 text-sm opacity-80 font-dm-sans mb-8">
-                {["Everything in Free", "Full application kits", "Cover letter + tailored CV", "Screening answers", "Skills gap analysis", "Follow-up generator"].map((f) => (
+                {["Unlimited job refreshes", "AI job scoring", "Full application kits", "Cover letter + tailored CV", "Screening answers", "Skills gap analysis", "Application tracker"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
-                    <span>—</span> {f}
+                    <span>✓</span> {f}
                   </li>
                 ))}
               </ul>
-              <Link href="/auth?upgrade=1" className="block w-full text-center py-3 bg-background text-text-primary rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
-                Get started — $9/mo
+              <Link href="/auth" className="block w-full text-center py-3 bg-background text-text-primary rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms]">
+                Get started free →
               </Link>
             </div>
           </div>

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -16,30 +15,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createBrowserSupabase();
-  const [plan, setPlan] = useState<string | null>(null);
-  const [upgrading, setUpgrading] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      const userId = data.session?.user.id;
-      if (!userId) return;
-      const { data: user } = await supabase.from("users").select("plan").eq("id", userId).single();
-      if (user) setPlan((user as { plan: string }).plan);
-    });
-  }, []);
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
-  };
-
-  const handleUpgrade = async () => {
-    setUpgrading(true);
-    const res = await fetch("/api/stripe/create-checkout", { method: "POST" });
-    const json = await res.json() as { url?: string };
-    if (json.url) window.location.href = json.url;
-    else setUpgrading(false);
   };
 
   return (
@@ -69,22 +48,13 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Upgrade nudge for free users */}
-      {plan === "free" && (
-        <div className="px-4 pb-3">
-          <div className="border border-border rounded-[8px] p-3 bg-background">
-            <p className="text-xs font-dm-sans font-medium text-text-primary mb-0.5">Free plan</p>
-            <p className="text-xs text-text-dimmed font-dm-sans mb-3">Unlock full kits, cover letters &amp; more.</p>
-            <button
-              onClick={handleUpgrade}
-              disabled={upgrading}
-              className="w-full py-2 bg-btn-bg text-btn-text rounded-[8px] text-xs font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-50"
-            >
-              {upgrading ? "Redirecting…" : "Upgrade to Pro — $9/mo"}
-            </button>
-          </div>
+      {/* Beta badge */}
+      <div className="px-4 pb-3">
+        <div className="border border-border rounded-[8px] p-3 bg-background text-center">
+          <p className="text-xs font-dm-sans font-medium text-text-primary">Open Beta</p>
+          <p className="text-xs text-text-dimmed font-dm-sans">All features free during beta.</p>
         </div>
-      )}
+      </div>
 
       <div className="p-4 border-t border-border">
         <button

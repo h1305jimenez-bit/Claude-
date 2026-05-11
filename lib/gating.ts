@@ -4,13 +4,15 @@ export interface UserPlan {
   daily_refreshes_reset_at: string | null;
 }
 
-export const checkPaidAccess = (user: UserPlan): boolean =>
-  user.plan === "paid";
+// During open beta every user gets full Pro access
+const OPEN_BETA = true;
+
+export const checkPaidAccess = (_user: UserPlan): boolean => OPEN_BETA || _user.plan === "paid";
 
 export const checkRefreshLimit = (
   user: UserPlan
 ): { allowed: boolean; remaining: number; unlimited: boolean } => {
-  if (user.plan === "paid") return { allowed: true, remaining: Infinity, unlimited: true };
+  if (OPEN_BETA || user.plan === "paid") return { allowed: true, remaining: Infinity, unlimited: true };
 
   const today = new Date().toDateString();
   const resetDate = user.daily_refreshes_reset_at

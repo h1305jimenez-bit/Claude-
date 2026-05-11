@@ -179,7 +179,7 @@ export default function KitPage() {
     );
   }
 
-  const isPaid = user?.plan === "paid";
+  const isPaid = true; // open beta — all features unlocked
 
   return (
     <div className="flex min-h-screen bg-background">
