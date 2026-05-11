@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { anthropic } from "@/lib/anthropic";
-import { fetchAdzunaJobs } from "@/lib/adzuna";
+import { fetchAdzunaJobs, SUPPORTED_LOCATIONS } from "@/lib/adzuna";
+import { fetchGoogleJobs } from "@/lib/serpapi";
 import { checkRefreshLimit } from "@/lib/gating";
 import type { User } from "@/lib/types";
+
+const ADZUNA_SUPPORTED = new Set(SUPPORTED_LOCATIONS.map(l => l.name.toLowerCase()));
 
 export const maxDuration = 120;
 
@@ -57,38 +60,56 @@ export async function POST(req: NextRequest) {
       return words.slice(-2).join(" ");
     }
 
-    // Fetch ALL role×location combinations in parallel so no combination is starved
+    // Fetch ALL role×location combinations in parallel from both APIs
     const combos = roles.flatMap(role => locations.map(loc => ({ role, loc })));
-    const comboResults = await Promise.allSettled(
-      combos.map(async ({ role, loc }) => {
-        const isWorldwide = !loc || /remote|worldwide/i.test(loc);
-        let results = await fetchAdzunaJobs(role, loc);
-        if (results.length === 0) {
-          const simplified = simplifyRole(role);
-          if (simplified) results = await fetchAdzunaJobs(simplified, loc);
-        }
-        if (results.length === 0 && isWorldwide) results = await fetchAdzunaJobs(role, "");
-        if (results.length === 0 && isWorldwide) {
-          const simplified = simplifyRole(role);
-          if (simplified) results = await fetchAdzunaJobs(simplified, "");
-        }
-        return results;
-      })
-    );
 
-    // Merge all results, deduplicate
+    const [adzunaResults, serpResults] = await Promise.all([
+      // Adzuna — only for its supported countries
+      Promise.allSettled(
+        combos.map(async ({ role, loc }) => {
+          const isWorldwide = !loc || /remote|worldwide/i.test(loc);
+          const locLower = loc.toLowerCase();
+          const isAdzunaSupported = isWorldwide || ADZUNA_SUPPORTED.has(locLower) ||
+            [...ADZUNA_SUPPORTED].some(s => locLower.includes(s) || s.includes(locLower));
+
+          if (!isAdzunaSupported) return [];
+
+          let results = await fetchAdzunaJobs(role, loc);
+          if (results.length === 0) {
+            const simplified = simplifyRole(role);
+            if (simplified) results = await fetchAdzunaJobs(simplified, loc);
+          }
+          if (results.length === 0 && isWorldwide) results = await fetchAdzunaJobs(role, "");
+          return results;
+        })
+      ),
+      // SerpAPI (Google Jobs) — runs for every location worldwide
+      Promise.allSettled(
+        combos.map(({ role, loc }) => fetchGoogleJobs(role, loc))
+      ),
+    ]);
+
+    // Merge all results, deduplicate by id
     const seenIds = new Set<string>();
-    const adzunaJobs: Awaited<ReturnType<typeof fetchAdzunaJobs>> = [];
-    for (const result of comboResults) {
+    type AnyJob = Awaited<ReturnType<typeof fetchAdzunaJobs>>[number] | Awaited<ReturnType<typeof fetchGoogleJobs>>[number];
+    const allJobs: AnyJob[] = [];
+
+    for (const result of adzunaResults) {
       if (result.status === "rejected") { adzunaError = result.reason?.message ?? String(result.reason); continue; }
       for (const job of result.value) {
-        if (!seenIds.has(job.id)) { seenIds.add(job.id); adzunaJobs.push(job); }
+        if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
+      }
+    }
+    for (const result of serpResults) {
+      if (result.status === "rejected") continue;
+      for (const job of result.value) {
+        if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
       }
     }
 
-    const adzunaCount = adzunaJobs.length;
+    const adzunaCount = allJobs.length;
     // Score up to 40 jobs — all in parallel with Haiku so latency stays low
-    const jobsToScore = adzunaJobs.slice(0, 40);
+    const jobsToScore = allJobs.slice(0, 40);
 
     // Resolve Adzuna tracking URLs to actual company career page URLs.
     // Adzuna's redirect_url lands on their own job detail page; we parse that page's HTML
