@@ -29,7 +29,31 @@ const COUNTRY_CODES: Record<string, string> = {
   "mx": "mx", "mexico": "mx",
   "pl": "pl", "poland": "pl",
   "za": "za", "south africa": "za",
+  "it": "it", "italy": "it",
+  "ru": "ru", "russia": "ru",
 };
+
+// Exported list of supported countries for UI dropdowns/pickers
+export const SUPPORTED_LOCATIONS: { name: string; code: string }[] = [
+  { name: "United States", code: "us" },
+  { name: "United Kingdom", code: "gb" },
+  { name: "Canada", code: "ca" },
+  { name: "Australia", code: "au" },
+  { name: "Germany", code: "de" },
+  { name: "France", code: "fr" },
+  { name: "Netherlands", code: "nl" },
+  { name: "Singapore", code: "sg" },
+  { name: "New Zealand", code: "nz" },
+  { name: "Austria", code: "at" },
+  { name: "Belgium", code: "be" },
+  { name: "Brazil", code: "br" },
+  { name: "India", code: "in" },
+  { name: "Mexico", code: "mx" },
+  { name: "Poland", code: "pl" },
+  { name: "South Africa", code: "za" },
+  { name: "Italy", code: "it" },
+  { name: "Russia", code: "ru" },
+];
 
 // Default countries to search when no specific location given
 const DEFAULT_COUNTRIES = ["us", "gb", "ca", "au", "de", "sg"];

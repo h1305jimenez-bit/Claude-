@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Spinner } from "@/components/Spinner";
 import { createBrowserSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { SUPPORTED_LOCATIONS } from "@/lib/adzuna";
 
 const SENIORITY_OPTIONS = ["Intern", "Junior", "Mid-level", "Senior", "Lead", "Manager", "Director", "Executive"];
 const WORK_AUTH_OPTIONS = ["US Citizen", "Green Card", "H-1B", "OPT/CPT", "TN Visa", "E-3", "Other", "Not applicable"];
@@ -167,7 +168,6 @@ export default function OnboardingPage() {
                 { key: "linkedin", label: "LinkedIn URL", type: "url", placeholder: "https://linkedin.com/in/you" },
                 { key: "education", label: "Highest education", type: "text", placeholder: "BS Computer Science, MIT" },
                 { key: "target_role", label: "Target role", type: "text", placeholder: "Software Engineer" },
-                { key: "target_location", label: "Target location", type: "text", placeholder: "San Francisco, CA" },
                 { key: "salary_expectation", label: "Salary expectation", type: "text", placeholder: "$120,000 – $150,000" },
               ].map((field) => (
                 <div key={field.key}>
@@ -181,6 +181,21 @@ export default function OnboardingPage() {
                   />
                 </div>
               ))}
+
+              <div>
+                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Target country</label>
+                <select
+                  value={form.target_location}
+                  onChange={(e) => setForm((f) => ({ ...f, target_location: e.target.value }))}
+                  className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                >
+                  <option value="">Select a country…</option>
+                  {SUPPORTED_LOCATIONS.map((loc) => (
+                    <option key={loc.code} value={loc.name}>{loc.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-1 opacity-70">Jobs are fetched from our search partner — only these countries are supported.</p>
+              </div>
 
               <div>
                 <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Seniority</label>

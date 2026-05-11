@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Spinner } from "@/components/Spinner";
 import type { User } from "@/lib/types";
+import { SUPPORTED_LOCATIONS } from "@/lib/adzuna";
 
 const TABS = ["Profile", "Preferences", "Account"] as const;
 type ProfileTab = (typeof TABS)[number];
@@ -25,7 +26,6 @@ export default function ProfilePage() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [roleInput, setRoleInput] = useState("");
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [locationInput, setLocationInput] = useState("");
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [companyInput, setCompanyInput] = useState("");
   const [preferences, setPreferences] = useState({
@@ -416,7 +416,10 @@ export default function ProfilePage() {
 
             {/* Target locations — multi-select */}
             <div>
-              <label className="block text-xs text-text-dimmed font-dm-sans mb-2">Target locations</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-text-dimmed font-dm-sans">Target locations</label>
+                <span className="text-xs text-text-dimmed font-dm-sans opacity-60">Supported countries only</span>
+              </div>
 
               {selectedLocations.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -434,55 +437,18 @@ export default function ProfilePage() {
               )}
 
               <div className="flex flex-wrap gap-2 mb-2">
-                {["United States", "United Kingdom", "Canada", "Australia", "Germany", "Singapore", "Mexico", "France", "Netherlands", "Remote / Worldwide"].map((loc) => {
-                  const selected = selectedLocations.includes(loc);
+                {SUPPORTED_LOCATIONS.map(({ name }) => {
+                  const selected = selectedLocations.includes(name);
                   return (
-                    <button key={loc} onClick={() => {
-                      const updated = selected ? selectedLocations.filter(l => l !== loc) : [...selectedLocations, loc];
+                    <button key={name} onClick={() => {
+                      const updated = selected ? selectedLocations.filter(l => l !== name) : [...selectedLocations, name];
                       setSelectedLocations(updated);
                       setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
                     }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
-                      {selected ? "✓ " : ""}{loc}
+                      {selected ? "✓ " : ""}{name}
                     </button>
                   );
                 })}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add a city or country..."
-                  value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && locationInput.trim()) {
-                      const val = locationInput.trim();
-                      if (!selectedLocations.includes(val)) {
-                        const updated = [...selectedLocations, val];
-                        setSelectedLocations(updated);
-                        setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
-                      }
-                      setLocationInput("");
-                      e.preventDefault();
-                    }
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
-                <button onClick={() => {
-                  const val = locationInput.trim();
-                  if (val && !selectedLocations.includes(val)) {
-                    const updated = [...selectedLocations, val];
-                    setSelectedLocations(updated);
-                    setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
-                  }
-                  setLocationInput("");
-                }} disabled={!locationInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
-                  Add
-                </button>
               </div>
             </div>
 
