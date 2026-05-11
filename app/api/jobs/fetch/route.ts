@@ -83,15 +83,18 @@ export async function POST(req: NextRequest) {
           return results;
         })
       ),
-      // SerpAPI (Google Jobs) — runs for every location worldwide
-      // Run sequentially to avoid hammering the API with too many parallel requests
-      (async () => {
-        const results: Awaited<ReturnType<typeof fetchGoogleJobs>>[] = [];
-        for (const { role, loc } of combos) {
-          try { results.push(await fetchGoogleJobs(role, loc)); } catch { results.push([]); }
-        }
-        return results;
-      })().then(r => r.map(v => ({ status: "fulfilled" as const, value: v }))),
+      // SerpAPI (Google Jobs) — only for locations Adzuna doesn't cover, capped at 4 queries
+      Promise.allSettled(
+        roles.slice(0, 2).flatMap(role =>
+          locations
+            .filter(loc => {
+              const ll = loc.toLowerCase();
+              return loc && !ADZUNA_SUPPORTED.has(ll) && ![...ADZUNA_SUPPORTED].some(s => ll.includes(s) || s.includes(ll));
+            })
+            .slice(0, 2)
+            .map(loc => fetchGoogleJobs(role, loc))
+        )
+      ),
     ]);
 
     // Merge all results, deduplicate by id
@@ -107,6 +110,7 @@ export async function POST(req: NextRequest) {
     }
     let serpJobsRaw = 0;
     for (const result of serpResults) {
+      if (result.status === "rejected") { continue; }
       serpJobsRaw += result.value.length;
       for (const job of result.value) {
         if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
