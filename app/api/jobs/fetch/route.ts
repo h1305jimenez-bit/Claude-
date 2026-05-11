@@ -3,6 +3,7 @@ import { anthropic } from "@/lib/anthropic";
 import { fetchAdzunaJobs, SUPPORTED_LOCATIONS } from "@/lib/adzuna";
 import { fetchGoogleJobs } from "@/lib/serpapi";
 import { fetchJoobleJobs } from "@/lib/jooble";
+import { fetchJSearchJobs } from "@/lib/jsearch";
 import { checkRefreshLimit } from "@/lib/gating";
 import type { User } from "@/lib/types";
 
@@ -95,12 +96,14 @@ export async function POST(req: NextRequest) {
             })
             .slice(0, 2)
             .map(async loc => {
-              const [jooble, serp] = await Promise.allSettled([
+              const [jooble, jsearch, serp] = await Promise.allSettled([
                 fetchJoobleJobs(role, loc),
+                fetchJSearchJobs(role, loc),
                 fetchGoogleJobs(role, loc),
               ]);
               return [
                 ...(jooble.status === "fulfilled" ? jooble.value : []),
+                ...(jsearch.status === "fulfilled" ? jsearch.value : []),
                 ...(serp.status === "fulfilled" ? serp.value : []),
               ];
             })
