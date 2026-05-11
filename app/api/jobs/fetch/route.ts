@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
       ? user.target_location.split(",").map((l: string) => l.trim()).filter(Boolean)
       : [""];
     let adzunaError = "";
-    let serpError = "";
     const searchQuery = roles.slice(0, 2).join(", ") + (locations[0] ? ` in ${locations.slice(0, 2).join(", ")}` : "");
 
     // Simplify a role title to its last 2 meaningful words (fallback for niche titles)
@@ -108,7 +107,6 @@ export async function POST(req: NextRequest) {
     }
     let serpJobsRaw = 0;
     for (const result of serpResults) {
-      if (result.status === "rejected") { serpError = result.reason?.message ?? String(result.reason); continue; }
       serpJobsRaw += result.value.length;
       for (const job of result.value) {
         if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
@@ -387,7 +385,7 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
       success: true,
       count: scoredJobs.length,
       remaining: remaining === Infinity ? 999 : remaining - 1,
-      debug: { searchQuery, adzunaCount, adzunaError, serpJobsRaw, serpError, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
+      debug: { searchQuery, adzunaCount, adzunaError, serpJobsRaw, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
