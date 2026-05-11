@@ -82,26 +82,36 @@ export async function fetchJSearchJobs(
 ): Promise<JSearchJob[]> {
   if (!process.env.JSEARCH_API_KEY) return [];
 
-  // JSearch expects "job title jobs in city/country" format
-  const query = location ? `${role} jobs in ${location}` : `${role} jobs`;
-  const countryCode = location ? getCountryCode(location) : undefined;
+  // Try both "role jobs in location" and "role jobs in <capital city>" for better coverage
+  const queries = location
+    ? [`${role} jobs in ${location}`]
+    : [`${role} jobs`];
+
+  // For country-level searches, also try the capital city for better results
+  const capitalCities: Record<string, string> = {
+    "chile": "Santiago", "argentina": "Buenos Aires", "colombia": "Bogotá",
+    "peru": "Lima", "venezuela": "Caracas", "ecuador": "Quito",
+    "bolivia": "La Paz", "uruguay": "Montevideo", "paraguay": "Asunción",
+    "brazil": "São Paulo", "mexico": "Mexico City", "spain": "Madrid",
+    "japan": "Tokyo", "china": "Shanghai", "nigeria": "Lagos", "kenya": "Nairobi",
+  };
+  const lower = location.toLowerCase().trim();
+  const capital = Object.entries(capitalCities).find(([country]) => lower.includes(country))?.[1];
+  if (capital && capital !== location) queries.push(`${role} jobs in ${capital}`);
 
   try {
-    const [page1, page2] = await Promise.allSettled([
-      fetchPage(query, 1, countryCode),
-      fetchPage(query, 2, countryCode),
-    ]);
+    const pageResults = await Promise.allSettled(
+      queries.flatMap(query => [fetchPage(query, 1), fetchPage(query, 2)])
+    );
 
     const combined: JSearchJob[] = [];
     const seen = new Set<string>();
-
-    for (const result of [page1, page2]) {
+    for (const result of pageResults) {
       if (result.status === "rejected") continue;
       for (const job of result.value) {
         if (!seen.has(job.id)) { seen.add(job.id); combined.push(job); }
       }
     }
-
     return combined;
   } catch {
     return [];
