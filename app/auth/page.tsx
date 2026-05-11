@@ -84,7 +84,7 @@ function AuthForm() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <Link href="/" className="font-syne font-bold text-2xl text-text-primary mb-12">
-        Applyjobs
+        Applykit
       </Link>
 
       {upgradeIntent && (

@@ -25,7 +25,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-56 bg-surface border-r border-border flex flex-col z-40">
       <div className="p-6 border-b border-border">
         <Link href="/dashboard">
-          <span className="font-syne font-bold text-xl text-text-primary">Applyjobs</span>
+          <span className="font-syne font-bold text-xl text-text-primary">Applykit</span>
         </Link>
       </div>
       <nav className="flex-1 p-4 space-y-1">

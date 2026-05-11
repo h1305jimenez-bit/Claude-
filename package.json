@@ -1,5 +1,5 @@
 {
-  "name": "applyjobs",
+  "name": "applykit",
   "version": "0.1.0",
   "private": true,
   "description": "AI-powered job application assistant — fetch jobs, score matches, and generate full application kits with Claude.",

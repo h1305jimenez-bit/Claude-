@@ -11,7 +11,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <span className="font-syne font-bold text-xl text-text-primary">Applyjobs</span>
+          <span className="font-syne font-bold text-xl text-text-primary">Applykit</span>
           <div className="flex items-center gap-4">
             <Link href="/auth" className="text-sm text-text-dimmed hover:text-text-primary transition-all duration-[150ms] font-dm-sans">
               Log in
@@ -29,7 +29,7 @@ export default function LandingPage() {
           Know what you&apos;re walking into.<br />Apply in 3 minutes.
         </h1>
         <p className="text-lg text-text-dimmed font-dm-sans font-light max-w-xl mx-auto mb-10">
-          Applyjobs fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.
+          Applykit fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/auth" className="px-6 py-3 bg-btn-bg text-btn-text rounded-[8px] font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms]">
@@ -130,8 +130,8 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="font-syne font-bold text-text-primary">Applyjobs</span>
-          <p className="text-sm text-text-dimmed font-dm-sans">© 2025 Applyjobs. All rights reserved.</p>
+          <span className="font-syne font-bold text-text-primary">Applykit</span>
+          <p className="text-sm text-text-dimmed font-dm-sans">© 2025 Applykit. All rights reserved.</p>
         </div>
       </footer>
     </main>

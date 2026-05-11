@@ -17,9 +17,9 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Applyjobs — Know what you're walking into. Apply in 3 minutes.",
+  title: "Applykit — Know what you're walking into. Apply in 3 minutes.",
   description:
-    "Applyjobs fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.",
+    "Applykit fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.",
 };
 
 export default function RootLayout({

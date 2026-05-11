@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: "usd",
-            product_data: { name: "Applyjobs Pro" },
+            product_data: { name: "Applykit Pro" },
             unit_amount: 900,
             recurring: { interval: "month" },
           },

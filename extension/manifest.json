@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Applyjobs Autofill",
+  "name": "Applykit Autofill",
   "version": "1.0.0",
-  "description": "Auto-fill job application forms using your Applyjobs profile and kit",
+  "description": "Auto-fill job application forms using your Applykit profile and kit",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Applyjobs Autofill"
+    "default_title": "Applykit Autofill"
   },
   "content_scripts": [
     {
