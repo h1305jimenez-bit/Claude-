@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { anthropic } from "@/lib/anthropic";
 import { fetchAdzunaJobs, SUPPORTED_LOCATIONS } from "@/lib/adzuna";
 import { fetchGoogleJobs } from "@/lib/serpapi";
+import { fetchJoobleJobs } from "@/lib/jooble";
 import { checkRefreshLimit } from "@/lib/gating";
 import type { User } from "@/lib/types";
 
@@ -83,7 +84,8 @@ export async function POST(req: NextRequest) {
           return results;
         })
       ),
-      // SerpAPI (Google Jobs) — only for locations Adzuna doesn't cover, capped at 4 queries
+      // Jooble + SerpAPI for locations Adzuna doesn't cover (worldwide coverage)
+      // Capped at 4 queries to stay within Vercel's 120s function limit
       Promise.allSettled(
         roles.slice(0, 2).flatMap(role =>
           locations
@@ -92,7 +94,16 @@ export async function POST(req: NextRequest) {
               return loc && !ADZUNA_SUPPORTED.has(ll) && ![...ADZUNA_SUPPORTED].some(s => ll.includes(s) || s.includes(ll));
             })
             .slice(0, 2)
-            .map(loc => fetchGoogleJobs(role, loc))
+            .map(async loc => {
+              const [jooble, serp] = await Promise.allSettled([
+                fetchJoobleJobs(role, loc),
+                fetchGoogleJobs(role, loc),
+              ]);
+              return [
+                ...(jooble.status === "fulfilled" ? jooble.value : []),
+                ...(serp.status === "fulfilled" ? serp.value : []),
+              ];
+            })
         )
       ),
     ]);
