@@ -33,6 +33,9 @@ async function fetchPage(query: string, start: number): Promise<SerpJob[]> {
     timeout: 10000,
   });
 
+  // SerpAPI returns { error: "..." } on quota exceeded, bad key, etc.
+  if (response.data.error) throw new Error(`SerpAPI: ${response.data.error}`);
+
   const results: RawSerpJob[] = response.data.jobs_results ?? [];
   return results.map((job) => ({
     id: `serp_${job.job_id ?? Math.random().toString(36).slice(2)}`,

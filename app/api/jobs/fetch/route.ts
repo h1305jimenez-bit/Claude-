@@ -101,8 +101,10 @@ export async function POST(req: NextRequest) {
         if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
       }
     }
+    let serpJobsRaw = 0;
     for (const result of serpResults) {
       if (result.status === "rejected") { serpError = result.reason?.message ?? String(result.reason); continue; }
+      serpJobsRaw += result.value.length;
       for (const job of result.value) {
         if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
       }
@@ -380,7 +382,7 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
       success: true,
       count: scoredJobs.length,
       remaining: remaining === Infinity ? 999 : remaining - 1,
-      debug: { searchQuery, adzunaCount, adzunaError, serpError, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
+      debug: { searchQuery, adzunaCount, adzunaError, serpJobsRaw, serpError, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
