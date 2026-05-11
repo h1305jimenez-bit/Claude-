@@ -1,14 +1,36 @@
 "use client";
 
+import { useState } from "react";
+
 interface KitPanelProps {
   title: string;
   children: React.ReactNode;
+  copyText?: string;
 }
 
-export function KitPanel({ title, children }: KitPanelProps) {
+export function KitPanel({ title, children, copyText }: KitPanelProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!copyText) return;
+    await navigator.clipboard.writeText(copyText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="border border-border rounded-card p-6 bg-surface">
-      <h3 className="font-syne font-bold text-text-primary mb-4">{title}</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-syne font-bold text-text-primary">{title}</h3>
+        {copyText && (
+          <button
+            onClick={handleCopy}
+            className="text-xs px-3 py-1 border border-border rounded-[6px] font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms]"
+          >
+            {copied ? "Copied ✓" : "Copy"}
+          </button>
+        )}
+      </div>
       {children}
     </div>
   );

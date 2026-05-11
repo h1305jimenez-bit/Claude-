@@ -249,7 +249,7 @@ export default function KitPage() {
         )}
 
         {tab === "cover" && kit && (
-          <KitPanel title="Cover letter">
+          <KitPanel title="Cover letter" copyText={kit.cover_letter}>
             <div className="prose prose-sm max-w-none">
               <pre className="whitespace-pre-wrap font-dm-sans text-sm text-text-primary leading-relaxed">{kit.cover_letter}</pre>
             </div>
@@ -257,7 +257,7 @@ export default function KitPage() {
         )}
 
         {tab === "cv" && kit && (
-          <KitPanel title="Tailored CV">
+          <KitPanel title="Tailored CV" copyText={kit.tailored_cv}>
             <div className="prose prose-sm max-w-none">
               <pre className="whitespace-pre-wrap font-dm-sans text-sm text-text-primary leading-relaxed">{kit.tailored_cv}</pre>
             </div>

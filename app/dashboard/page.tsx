@@ -38,6 +38,11 @@ export default function DashboardPage() {
 
       if (userRes.data) {
         const u = userRes.data as User;
+        // Redirect to onboarding if user hasn't uploaded a CV yet
+        if (!u.cv_text) {
+          window.location.href = "/onboarding";
+          return;
+        }
         setUser(u);
         // Compute remaining refreshes
         const today = new Date().toDateString();
