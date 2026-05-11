@@ -220,15 +220,14 @@ async function init() {
 
   const apiUrl = await resolveApiUrl();
 
+  // Always show the API URL field so the user can see and correct it
+  if (apiUrl) apiInput.value = apiUrl;
+
   if (!token) {
     setupView.style.display = "block";
     connectedView.style.display = "none";
-    if (apiUrl) {
-      apiInput.value = apiUrl;
-      apiRow.style.display = "none";
-    } else {
-      apiRow.style.display = "block";
-    }
+    if (!apiUrl) showStatus(document.getElementById("setupStatus"),
+      "Open your ApplyPilot app in a tab so the URL is auto-detected.", "info");
     return;
   }
 
@@ -237,8 +236,6 @@ async function init() {
     await clearToken();
     setupView.style.display = "block";
     connectedView.style.display = "none";
-    if (apiUrl) { apiInput.value = apiUrl; apiRow.style.display = "none"; }
-    else { apiRow.style.display = "block"; }
     showStatus(document.getElementById("setupStatus"),
       "Session expired. Go to Profile → Copy extension token, then paste a new one here.", "error");
     return;
@@ -247,9 +244,8 @@ async function init() {
   if (!apiUrl) {
     setupView.style.display = "block";
     connectedView.style.display = "none";
-    apiRow.style.display = "block";
     showStatus(document.getElementById("setupStatus"),
-      "Open your ApplyPilot app in a tab, or enter the URL below.", "info");
+      "Open your ApplyPilot app in a tab so the URL is auto-detected.", "info");
     return;
   }
 
@@ -310,10 +306,8 @@ async function init() {
     await clearToken();
     setupView.style.display = "block";
     connectedView.style.display = "none";
-    if (apiUrl) { apiInput.value = apiUrl; apiRow.style.display = "none"; }
-    else { apiRow.style.display = "block"; }
     showStatus(document.getElementById("setupStatus"),
-      (e instanceof Error ? e.message : "Connection failed") + " Go to Profile → Copy extension token.", "error");
+      e instanceof Error ? e.message : "Connection failed. Go to Profile → Copy extension token.", "error");
   }
 }
 
@@ -594,6 +588,19 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
 document.getElementById("disconnectBtn")?.addEventListener("click", async () => {
   await clearStored();
   init();
+});
+
+document.getElementById("resetBtn")?.addEventListener("click", async () => {
+  await clearStored();
+  const freshUrl = await resolveApiUrl();
+  const apiInput = document.getElementById("apiInput");
+  if (freshUrl) {
+    apiInput.value = freshUrl;
+    showStatus(document.getElementById("setupStatus"), `URL updated to ${freshUrl}`, "success");
+  } else {
+    apiInput.value = "";
+    showStatus(document.getElementById("setupStatus"), "Open the ApplyPilot app in a tab, then click Reset again.", "info");
+  }
 });
 
 init();

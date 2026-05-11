@@ -93,7 +93,14 @@ export async function GET(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json(
-      { error: "User not found. Open ApplyPilot in a tab, log in, then try connecting again." },
+      {
+        error: "User not found. Open ApplyPilot in a tab, log in, then try connecting again.",
+        debug: {
+          userId: jwt.userId,
+          email: jwt.email || "(none in token)",
+          serviceKey: !!SERVICE_KEY,
+        },
+      },
       { status: 404, headers: CORS }
     );
   }
