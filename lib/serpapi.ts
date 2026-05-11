@@ -54,27 +54,23 @@ export async function fetchGoogleJobs(
 
   const query = location ? `${role} jobs ${location}` : `${role} jobs`;
 
-  try {
-    const [page1, page2] = await Promise.allSettled([
-      fetchPage(query, 0),
-      fetchPage(query, 10),
-    ]);
+  const [page1, page2] = await Promise.allSettled([
+    fetchPage(query, 0),
+    fetchPage(query, 10),
+  ]);
 
-    const combined: SerpJob[] = [];
-    const seen = new Set<string>();
+  const combined: SerpJob[] = [];
+  const seen = new Set<string>();
 
-    for (const result of [page1, page2]) {
-      if (result.status === "rejected") continue;
-      for (const job of result.value) {
-        if (!seen.has(job.id)) {
-          seen.add(job.id);
-          combined.push(job);
-        }
+  for (const result of [page1, page2]) {
+    if (result.status === "rejected") throw result.reason;
+    for (const job of result.value) {
+      if (!seen.has(job.id)) {
+        seen.add(job.id);
+        combined.push(job);
       }
     }
-
-    return combined;
-  } catch {
-    return [];
   }
+
+  return combined;
 }
