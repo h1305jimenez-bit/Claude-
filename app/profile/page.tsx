@@ -417,20 +417,26 @@ export default function ProfilePage() {
 
             {/* Target locations — multi-select */}
             <div>
-              <label className="block text-xs text-text-dimmed font-dm-sans mb-2">Target locations</label>
+              <div className="mb-2">
+                <label className="block text-xs text-text-dimmed font-dm-sans mb-0.5">Target locations</label>
+                <p className="text-xs text-text-dimmed font-dm-sans opacity-60">Highlighted countries fetch jobs automatically. Others require manual job adding.</p>
+              </div>
 
               {selectedLocations.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {selectedLocations.map((loc) => (
-                    <span key={loc} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
-                      {loc}
-                      <button onClick={() => {
-                        const updated = selectedLocations.filter(l => l !== loc);
-                        setSelectedLocations(updated);
-                        setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
-                      }} className="opacity-60 hover:opacity-100">×</button>
-                    </span>
-                  ))}
+                  {selectedLocations.map((loc) => {
+                    const isSupported = SUPPORTED_LOCATIONS.some(s => s.name.toLowerCase() === loc.toLowerCase());
+                    return (
+                      <span key={loc} className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans rounded-full ${isSupported ? "bg-text-primary text-background" : "bg-surface border border-border text-text-dimmed"}`}>
+                        {isSupported ? "✓ " : "⚠ "}{loc}
+                        <button onClick={() => {
+                          const updated = selectedLocations.filter(l => l !== loc);
+                          setSelectedLocations(updated);
+                          setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                        }} className="opacity-60 hover:opacity-100">×</button>
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 

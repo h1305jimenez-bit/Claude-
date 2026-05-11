@@ -7,7 +7,10 @@ import { JobRow } from "@/components/JobRow";
 import { RefreshMeter } from "@/components/RefreshMeter";
 import { AddJobModal } from "@/components/AddJobModal";
 import { PageSpinner } from "@/components/Spinner";
+import { SUPPORTED_LOCATIONS } from "@/lib/adzuna";
 import type { Job, User } from "@/lib/types";
+
+const SUPPORTED_NAMES = new Set(SUPPORTED_LOCATIONS.map(l => l.name.toLowerCase()));
 
 export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -240,6 +243,30 @@ export default function DashboardPage() {
               onClose={() => setShowAddJob(false)}
             />
           )}
+
+          {/* Unsupported location notice */}
+          {user?.target_location && (() => {
+            const unsupported = user.target_location
+              .split(",").map(l => l.trim()).filter(Boolean)
+              .filter(l => !SUPPORTED_NAMES.has(l.toLowerCase()));
+            if (!unsupported.length) return null;
+            return (
+              <div className="border border-border rounded-[8px] p-4 mb-6 bg-surface">
+                <p className="text-sm font-dm-sans font-medium text-text-primary mb-1">
+                  Automatic job search unavailable for: {unsupported.join(", ")}
+                </p>
+                <p className="text-xs text-text-dimmed font-dm-sans mb-3">
+                  Our job search partners don&apos;t cover these locations yet. You can still apply to jobs there — paste any job URL using the button below and we&apos;ll score it and build a full application kit.
+                </p>
+                <button
+                  onClick={() => setShowAddJob(true)}
+                  className="px-3 py-1.5 bg-btn-bg text-btn-text rounded-[8px] text-xs font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms]"
+                >
+                  + Add job manually →
+                </button>
+              </div>
+            );
+          })()}
 
           {error && (
             <div className="border border-border rounded-[8px] p-3 mb-6 bg-surface text-sm text-text-dimmed font-dm-sans flex items-center justify-between gap-3">
