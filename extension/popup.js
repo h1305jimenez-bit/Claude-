@@ -27,26 +27,27 @@ function isTokenExpired(token) {
   } catch { return false; }
 }
 
-// Auto-detect API URL: check stored value first, then scan open tabs for the app
+// Auto-detect API URL: scan open tabs first (to pick up new deployments),
+// fall back to the stored value only when no matching tab is found.
 async function resolveApiUrl() {
-  const { ap_api } = await getStored(["ap_api"]);
-  if (ap_api) return ap_api;
   try {
     const tabs = await chrome.tabs.query({});
-    const appPaths = ["/dashboard", "/profile", "/tracker", "/kit/", "/auth"];
+    const appPaths = ["/dashboard", "/profile", "/tracker", "/kit/", "/auth", "/onboarding"];
     for (const tab of tabs) {
       if (!tab.url) continue;
       try {
         const u = new URL(tab.url);
         if (appPaths.some(p => u.pathname.startsWith(p))) {
           const base = `${u.protocol}//${u.host}`;
-          await setStored({ ap_api: base });
+          await setStored({ ap_api: base }); // always refresh the stored URL
           return base;
         }
       } catch { /* skip */ }
     }
-  } catch { /* scripting permission issue */ }
-  return null;
+  } catch { /* scripting permission unavailable */ }
+  // No matching tab open — fall back to stored value
+  const { ap_api } = await getStored(["ap_api"]);
+  return ap_api ?? null;
 }
 
 async function fetchProfile(token, apiUrl) {
@@ -56,8 +57,16 @@ async function fetchProfile(token, apiUrl) {
       headers: { "x-access-token": token },
     });
   } catch {
-    throw new Error(`Cannot reach ${apiUrl} — is the app open?`);
+    throw new Error(`Cannot reach ${apiUrl} — make sure the app is open in a tab and try again.`);
   }
+
+  // If the response is not JSON (e.g. a Vercel HTML 404), the URL is stale
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    await clearStored(); // wipe stale URL so it gets re-detected
+    throw new Error("App URL has changed. Open ApplyPilot in a tab, then click Connect again.");
+  }
+
   if (res.status === 401) {
     throw new Error("Token rejected. Go to Profile → Copy extension token and paste a fresh one.");
   }
@@ -576,6 +585,8 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
     showStatus(status, "Connected! Reloading...", "success");
     setTimeout(() => init(), 800);
   } catch (e) {
+    // Re-detect the API URL on next open in case it changed
+    await chrome.storage.local.remove(["ap_api"]);
     showStatus(status, e instanceof Error ? e.message : "Connection failed", "error");
   }
 });
