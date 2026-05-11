@@ -604,7 +604,7 @@ export default function ProfilePage() {
                 onClick={() => {
                   if (accessToken) {
                     navigator.clipboard.writeText(accessToken);
-                    setMessage("Token copied — paste it in the ApplyPilot extension popup.");
+                    setMessage("Token copied — paste it in the Applyjobs extension popup.");
                   }
                 }}
                 className="px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-primary hover:bg-surface-secondary transition-all duration-[150ms]"

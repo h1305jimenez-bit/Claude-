@@ -104,7 +104,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-8">
-          <span className="font-syne font-bold text-xl text-text-primary">ApplyPilot</span>
+          <span className="font-syne font-bold text-xl text-text-primary">Applyjobs</span>
           <div className="flex gap-2 mt-4">
             {[1, 2].map((s) => (
               <div

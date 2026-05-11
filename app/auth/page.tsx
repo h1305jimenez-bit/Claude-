@@ -59,7 +59,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <Link href="/" className="font-syne font-bold text-2xl text-text-primary mb-12">
-        ApplyPilot
+        Applyjobs
       </Link>
 
       <div className="w-full max-w-sm border border-border rounded-[8px] p-8 bg-surface">

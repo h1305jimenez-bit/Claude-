@@ -1,4 +1,4 @@
-// ApplyPilot popup — reads stored token, shows profile, triggers autofill
+// Applyjobs popup — reads stored token, shows profile, triggers autofill
 
 async function getStored(keys) {
   return new Promise(resolve => chrome.storage.local.get(keys, resolve));
@@ -64,7 +64,7 @@ async function fetchProfile(token, apiUrl) {
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     await clearStored(); // wipe stale URL so it gets re-detected
-    throw new Error("App URL has changed. Open ApplyPilot in a tab, then click Connect again.");
+    throw new Error("App URL has changed. Open Applyjobs in a tab, then click Connect again.");
   }
 
   if (res.status === 401) {
@@ -72,7 +72,7 @@ async function fetchProfile(token, apiUrl) {
   }
   if (res.status === 404) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || "Account not found. Open ApplyPilot, log in, then try again.");
+    throw new Error(body.error || "Account not found. Open Applyjobs, log in, then try again.");
   }
   if (!res.ok) throw new Error(`Server error (${res.status}). Try again in a moment.`);
   return res.json();
@@ -227,7 +227,7 @@ async function init() {
     setupView.style.display = "block";
     connectedView.style.display = "none";
     if (!apiUrl) showStatus(document.getElementById("setupStatus"),
-      "Open your ApplyPilot app in a tab so the URL is auto-detected.", "info");
+      "Open your Applyjobs app in a tab so the URL is auto-detected.", "info");
     return;
   }
 
@@ -245,7 +245,7 @@ async function init() {
     setupView.style.display = "block";
     connectedView.style.display = "none";
     showStatus(document.getElementById("setupStatus"),
-      "Open your ApplyPilot app in a tab so the URL is auto-detected.", "info");
+      "Open your Applyjobs app in a tab so the URL is auto-detected.", "info");
     return;
   }
 
@@ -564,7 +564,7 @@ document.getElementById("connectBtn").addEventListener("click", async () => {
 
   let apiUrl = apiInput.value.trim().replace(/\/$/, "");
   if (!apiUrl) apiUrl = await resolveApiUrl() ?? "";
-  if (!apiUrl) { showStatus(status, "Enter your ApplyPilot app URL (e.g. https://yourapp.vercel.app).", "error"); return; }
+  if (!apiUrl) { showStatus(status, "Enter your Applyjobs app URL (e.g. https://yourapp.vercel.app).", "error"); return; }
 
   if (isTokenExpired(token)) {
     showStatus(status, "That token has already expired. Go to Profile → Copy extension token for a fresh one.", "error");
@@ -599,7 +599,7 @@ document.getElementById("resetBtn")?.addEventListener("click", async () => {
     showStatus(document.getElementById("setupStatus"), `URL updated to ${freshUrl}`, "success");
   } else {
     apiInput.value = "";
-    showStatus(document.getElementById("setupStatus"), "Open the ApplyPilot app in a tab, then click Reset again.", "info");
+    showStatus(document.getElementById("setupStatus"), "Open the Applyjobs app in a tab, then click Reset again.", "info");
   }
 });
 
