@@ -24,7 +24,7 @@ interface RawJSearchJob {
 }
 
 async function fetchPage(query: string, page: number): Promise<JSearchJob[]> {
-  const response = await axios.get("https://jsearch.p.rapidapi.com/search", {
+  const response = await axios.get("https://jsearch.p.rapidapi.com/search-v2", {
     params: { query, page, num_pages: 1, date_posted: "month" },
     headers: {
       "X-RapidAPI-Key": process.env.JSEARCH_API_KEY!,
