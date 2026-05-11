@@ -105,6 +105,30 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Generate a short-lived signed URL for the CV so the extension can download it
+  let cvSignedUrl: string | null = null;
+  if (user.cv_url) {
+    const signKey = SERVICE_KEY || apiKey;
+    try {
+      const signRes = await fetch(
+        `${SUPABASE_URL}/storage/v1/object/sign/cvs/${user.cv_url}`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${signKey}`,
+            "apikey": signKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ expiresIn: 3600 }),
+        }
+      );
+      if (signRes.ok) {
+        const { signedURL } = await signRes.json() as { signedURL?: string };
+        if (signedURL) cvSignedUrl = `${SUPABASE_URL}/storage/v1${signedURL}`;
+      }
+    } catch { /* fall through — cv download just won't work */ }
+  }
+
   return NextResponse.json({
     user: {
       name: user.name,
@@ -117,7 +141,7 @@ export async function GET(req: NextRequest) {
       seniority: user.seniority,
       work_authorization: user.work_authorization,
       salary_expectation: user.salary_expectation,
-      cv_url: user.cv_url,
+      cv_url: cvSignedUrl,
       cv_text: (user.cv_text ?? "").slice(0, 4000),
     },
   }, { headers: CORS });
