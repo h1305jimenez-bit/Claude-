@@ -85,9 +85,14 @@ export async function POST(req: NextRequest) {
         })
       ),
       // SerpAPI (Google Jobs) — runs for every location worldwide
-      Promise.allSettled(
-        combos.map(({ role, loc }) => fetchGoogleJobs(role, loc))
-      ),
+      // Run sequentially to avoid hammering the API with too many parallel requests
+      (async () => {
+        const results: Awaited<ReturnType<typeof fetchGoogleJobs>>[] = [];
+        for (const { role, loc } of combos) {
+          try { results.push(await fetchGoogleJobs(role, loc)); } catch { results.push([]); }
+        }
+        return results;
+      })().then(r => r.map(v => ({ status: "fulfilled" as const, value: v }))),
     ]);
 
     // Merge all results, deduplicate by id

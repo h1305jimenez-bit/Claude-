@@ -30,7 +30,7 @@ async function fetchPage(query: string, start: number): Promise<SerpJob[]> {
       hl: "en",
       start,
     },
-    timeout: 10000,
+    timeout: 25000,
   });
 
   // SerpAPI returns { error: "..." } on quota exceeded, bad key, etc.
@@ -55,23 +55,23 @@ export async function fetchGoogleJobs(
 ): Promise<SerpJob[]> {
   if (!process.env.SERPAPI_KEY) return [];
 
-  const query = location ? `${role} jobs ${location}` : `${role} jobs`;
+  const query = location ? `${role} ${location}` : role;
 
-  const [page1, page2] = await Promise.allSettled([
-    fetchPage(query, 0),
-    fetchPage(query, 10),
+  // Fetch page 1 (required) and page 2 (best-effort — don't fail if slow)
+  const page1 = await fetchPage(query, 0);
+
+  const page2Result = await Promise.race([
+    fetchPage(query, 10).catch(() => [] as SerpJob[]),
+    new Promise<SerpJob[]>(resolve => setTimeout(() => resolve([]), 8000)),
   ]);
 
   const combined: SerpJob[] = [];
   const seen = new Set<string>();
 
-  for (const result of [page1, page2]) {
-    if (result.status === "rejected") throw result.reason;
-    for (const job of result.value) {
-      if (!seen.has(job.id)) {
-        seen.add(job.id);
-        combined.push(job);
-      }
+  for (const job of [...page1, ...page2Result]) {
+    if (!seen.has(job.id)) {
+      seen.add(job.id);
+      combined.push(job);
     }
   }
 
