@@ -21,15 +21,19 @@ interface RawSerpJob {
   detected_extensions?: { posted_at?: string };
 }
 
-async function fetchPage(query: string, start: number): Promise<SerpJob[]> {
+async function fetchPage(query: string, start: number, location?: string): Promise<SerpJob[]> {
+  const params: Record<string, string | number> = {
+    engine: "google_jobs",
+    q: query,
+    api_key: process.env.SERPAPI_KEY!,
+    hl: "en",
+    start,
+  };
+
+  if (location) params.location = location;
+
   const response = await axios.get("https://serpapi.com/search.json", {
-    params: {
-      engine: "google_jobs",
-      q: query,
-      api_key: process.env.SERPAPI_KEY,
-      hl: "en",
-      start,
-    },
+    params,
     timeout: 25000,
   });
 
@@ -55,13 +59,14 @@ export async function fetchGoogleJobs(
 ): Promise<SerpJob[]> {
   if (!process.env.SERPAPI_KEY) return [];
 
-  const query = location ? `${role} ${location}` : role;
+  // Pass role as the query and location as SerpAPI's location param so
+  // Google Jobs searches within that geography rather than defaulting to US.
+  const serpLocation = location || undefined;
 
-  // Fetch page 1 (required) and page 2 (best-effort — don't fail if slow)
-  const page1 = await fetchPage(query, 0);
+  const page1 = await fetchPage(role, 0, serpLocation);
 
   const page2Result = await Promise.race([
-    fetchPage(query, 10).catch(() => [] as SerpJob[]),
+    fetchPage(role, 10, serpLocation).catch(() => [] as SerpJob[]),
     new Promise<SerpJob[]>(resolve => setTimeout(() => resolve([]), 8000)),
   ]);
 
