@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "upgrade_required" }, { status: 403 });
     }
 
+    if (!user.cv_text) {
+      return NextResponse.json({ error: "cv_required" }, { status: 400 });
+    }
+
     const { data: job } = await supabaseAdmin.from("jobs").select("*").eq("id", jobId).eq("user_id", userId).single();
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 

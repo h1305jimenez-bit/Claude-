@@ -95,8 +95,8 @@ export default function KitPage() {
       });
       const data = await res.json() as { kit?: Kit; error?: string };
       if (!res.ok) {
-        if (data.error === "upgrade_required") {
-          setError("upgrade_required");
+        if (data.error === "upgrade_required" || data.error === "cv_required") {
+          setError(data.error);
         } else {
           throw new Error(data.error ?? "Generation failed");
         }
@@ -237,17 +237,31 @@ export default function KitPage() {
 
         {tab !== "preview" && tab !== "insights" && isPaid && !kit && !generating && (
           <div className="border border-border rounded-[8px] p-8 text-center bg-surface mb-6">
-            <p className="font-syne font-bold text-lg text-text-primary mb-2">Generate your application kit</p>
-            <p className="text-text-dimmed text-sm font-dm-sans mb-4">
-              Get a tailored cover letter, CV, screening answers, and skills gap analysis for this role.
-            </p>
-            {error && <p className="text-xs text-red-500 font-dm-sans mb-3">{error}</p>}
-            <button
-              onClick={generateKit}
-              className="px-6 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
-            >
-              Generate kit
-            </button>
+            {error === "cv_required" ? (
+              <>
+                <p className="font-syne font-bold text-lg text-text-primary mb-2">Upload your CV first</p>
+                <p className="text-text-dimmed text-sm font-dm-sans mb-4">
+                  A kit can&apos;t be tailored without your CV. Upload it in your profile and come back.
+                </p>
+                <a href="/profile" className="inline-block px-6 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
+                  Upload CV →
+                </a>
+              </>
+            ) : (
+              <>
+                <p className="font-syne font-bold text-lg text-text-primary mb-2">Generate your application kit</p>
+                <p className="text-text-dimmed text-sm font-dm-sans mb-4">
+                  Get a tailored cover letter, CV, screening answers, and skills gap analysis for this role.
+                </p>
+                {error && <p className="text-xs text-red-500 font-dm-sans mb-3">{error}</p>}
+                <button
+                  onClick={generateKit}
+                  className="px-6 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]"
+                >
+                  Generate kit
+                </button>
+              </>
+            )}
           </div>
         )}
 

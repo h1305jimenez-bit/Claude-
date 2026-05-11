@@ -101,7 +101,7 @@ export function AddJobModal({ onClose }: Props) {
               disabled={saving}
               className="flex-1 py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
             >
-              {saving ? "Adding..." : "Add job →"}
+              {saving ? "Adding & scoring…" : "Add job →"}
             </button>
           </div>
         </div>
