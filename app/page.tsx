@@ -126,8 +126,8 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/auth" className="block w-full text-center py-3 bg-background text-text-primary rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
-                Get started
+              <Link href="/auth?upgrade=1" className="block w-full text-center py-3 bg-background text-text-primary rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
+                Get started — $9/mo
               </Link>
             </div>
           </div>
