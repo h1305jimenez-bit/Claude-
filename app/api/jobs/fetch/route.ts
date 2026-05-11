@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
           return results;
         })
       ),
-      // Jooble + SerpAPI for locations Adzuna doesn't cover (worldwide coverage)
+      // Jooble + JSearch + SerpAPI for locations Adzuna doesn't cover
       // Capped at 4 queries to stay within Vercel's 120s function limit
       Promise.allSettled(
         roles.slice(0, 2).flatMap(role =>
@@ -101,11 +101,22 @@ export async function POST(req: NextRequest) {
                 fetchJSearchJobs(role, loc),
                 fetchGoogleJobs(role, loc),
               ]);
-              return [
-                ...(jooble.status === "fulfilled" ? jooble.value : []),
-                ...(jsearch.status === "fulfilled" ? jsearch.value : []),
-                ...(serp.status === "fulfilled" ? serp.value : []),
-              ];
+              const joobleJobs = jooble.status === "fulfilled" ? jooble.value : [];
+              const jsearchJobs = jsearch.status === "fulfilled" ? jsearch.value : [];
+              const serpJobs = serp.status === "fulfilled" ? serp.value : [];
+              return {
+                jobs: [...joobleJobs, ...jsearchJobs, ...serpJobs],
+                debug: {
+                  loc,
+                  role,
+                  joobleCount: joobleJobs.length,
+                  jsearchCount: jsearchJobs.length,
+                  serpCount: serpJobs.length,
+                  joobleError: jooble.status === "rejected" ? String(jooble.reason) : null,
+                  jsearchError: jsearch.status === "rejected" ? String(jsearch.reason) : null,
+                  serpError: serp.status === "rejected" ? String(serp.reason) : null,
+                },
+              };
             })
         )
       ),
@@ -122,15 +133,11 @@ export async function POST(req: NextRequest) {
         if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
       }
     }
-    let serpJobsRaw = 0;
-    const serpErrors: string[] = [];
+    const worldwideDebug: unknown[] = [];
     for (const result of serpResults) {
-      if (result.status === "rejected") {
-        serpErrors.push(result.reason?.message ?? String(result.reason));
-        continue;
-      }
-      serpJobsRaw += result.value.length;
-      for (const job of result.value) {
+      if (result.status === "rejected") continue;
+      worldwideDebug.push(result.value.debug);
+      for (const job of result.value.jobs) {
         if (!seenIds.has(job.id)) { seenIds.add(job.id); allJobs.push(job); }
       }
     }
@@ -407,7 +414,7 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
       success: true,
       count: scoredJobs.length,
       remaining: remaining === Infinity ? 999 : remaining - 1,
-      debug: { searchQuery, adzunaCount, adzunaError, serpJobsRaw, serpErrors, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
+      debug: { searchQuery, adzunaCount, adzunaError, worldwideDebug, joobleKeySet: !!process.env.JOOBLE_API_KEY, jsearchKeySet: !!process.env.JSEARCH_API_KEY, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
     console.error("jobs/fetch error:", err);
