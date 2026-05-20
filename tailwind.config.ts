@@ -18,8 +18,9 @@ const config: Config = {
         "btn-text": "#ffffff",
       },
       fontFamily: {
-        syne: ["var(--font-syne)", "sans-serif"],
-        "dm-sans": ["var(--font-dm-sans)", "sans-serif"],
+        inter: ["var(--font-inter)", "sans-serif"],
+        syne: ["var(--font-inter)", "sans-serif"],
+        "dm-sans": ["var(--font-inter)", "sans-serif"],
       },
       borderRadius: {
         card: "8px",

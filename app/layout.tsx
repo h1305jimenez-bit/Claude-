@@ -1,18 +1,11 @@
 import type { Metadata } from "next";
-import { Syne, DM_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["700", "800"],
-  variable: "--font-syne",
-  display: "swap",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  variable: "--font-dm-sans",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -28,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${syne.variable} ${dmSans.variable}`}>
-      <body className="font-dm-sans min-h-screen bg-background text-text-primary">
+    <html lang="en" className={inter.variable}>
+      <body className="font-inter min-h-screen bg-background text-text-primary">
         {children}
       </body>
     </html>
