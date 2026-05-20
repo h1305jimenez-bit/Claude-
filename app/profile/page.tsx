@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [uploadingCv, setUploadingCv] = useState(false);
   const [message, setMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
   const [suggestedRoles, setSuggestedRoles] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -100,9 +101,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("upgraded") === "true") {
-        setMessage("You are now on Pro. Welcome!");
-      }
+      if (params.get("upgraded") === "true") setMessage("You are now on Pro. Welcome!");
+      if (params.get("tab") === "account") setTab("Account");
     }
   }, []);
 
@@ -602,22 +602,51 @@ export default function ProfilePage() {
         {tab === "Account" && (
           <div className="space-y-6">
             {/* Chrome Extension */}
-            <div className="border border-border rounded-[8px] p-6 bg-surface">
-              <h3 className="font-dm-sans font-medium text-text-primary mb-1">Chrome Extension</h3>
-              <p className="text-xs text-text-dimmed font-dm-sans mb-4">
-                Auto-fill job applications on Greenhouse, Lever, Workday and more. Click below to copy your session token, then paste it into the extension popup.
+            <div className="border-2 border-btn-bg rounded-[8px] p-6 bg-surface">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">🔌</span>
+                <h3 className="font-dm-sans font-semibold text-text-primary">Connect Chrome Extension</h3>
+              </div>
+              <p className="text-xs text-text-dimmed font-dm-sans mb-5">
+                Auto-fill job applications on Greenhouse, Lever, Workday, and 20+ other platforms directly from your browser.
               </p>
+
+              <ol className="space-y-3 mb-5">
+                {[
+                  { step: "1", text: "Install the Applykit extension from the Chrome Web Store" },
+                  { step: "2", text: "Click the Applykit icon in your browser toolbar to open the popup" },
+                  { step: "3", text: "Copy your token below and paste it into the extension popup" },
+                  { step: "4", text: "Click Connect — you're ready to auto-fill applications!" },
+                ].map(({ step, text }) => (
+                  <li key={step} className="flex items-start gap-3">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-btn-bg text-btn-text text-xs font-dm-sans font-medium flex items-center justify-center mt-0.5">{step}</span>
+                    <p className="text-sm font-dm-sans text-text-primary">{text}</p>
+                  </li>
+                ))}
+              </ol>
+
               <button
                 onClick={() => {
                   if (accessToken) {
                     navigator.clipboard.writeText(accessToken);
-                    setMessage("Token copied — paste it in the Applykit extension popup.");
+                    setTokenCopied(true);
+                    setTimeout(() => setTokenCopied(false), 3000);
                   }
                 }}
-                className="px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-primary hover:bg-surface-secondary transition-all duration-[150ms]"
+                className={`w-full py-3 rounded-[8px] text-sm font-dm-sans font-medium transition-all duration-[150ms] ${
+                  tokenCopied
+                    ? "bg-green-600 text-white"
+                    : "bg-btn-bg text-btn-text hover:opacity-90"
+                }`}
               >
-                Copy extension token
+                {tokenCopied ? "✓ Token copied — paste it in the extension!" : "Copy my token →"}
               </button>
+
+              {tokenCopied && (
+                <p className="text-xs text-text-dimmed font-dm-sans text-center mt-2">
+                  Now open the extension popup and paste it there.
+                </p>
+              )}
             </div>
 
             <div className="border border-border rounded-[8px] p-6 bg-surface">

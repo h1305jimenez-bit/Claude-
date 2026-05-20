@@ -48,6 +48,17 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Chrome Extension CTA */}
+      <div className="px-4 pb-3">
+        <Link
+          href="/profile?tab=account"
+          className="block border border-border rounded-[8px] p-3 bg-background hover:bg-surface-secondary transition-all duration-[150ms]"
+        >
+          <p className="text-xs font-dm-sans font-medium text-text-primary mb-0.5">🔌 Chrome Extension</p>
+          <p className="text-xs text-text-dimmed font-dm-sans">Connect to auto-fill applications →</p>
+        </Link>
+      </div>
+
       {/* Beta badge */}
       <div className="px-4 pb-3">
         <div className="border border-border rounded-[8px] p-3 bg-background text-center">
