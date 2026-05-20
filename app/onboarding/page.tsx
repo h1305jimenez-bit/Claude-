@@ -36,6 +36,26 @@ export default function OnboardingPage() {
       if (!session) { router.push("/auth"); return; }
       setAccessToken(session.access_token);
     });
+    // Pre-fill form from landing page CV parse
+    try {
+      const raw = sessionStorage.getItem("cv_parsed_prefs");
+      if (raw) {
+        const prefs = JSON.parse(raw) as Partial<typeof form>;
+        setForm((f) => ({
+          ...f,
+          ...(prefs.name && { name: prefs.name }),
+          ...(prefs.phone && { phone: prefs.phone }),
+          ...(prefs.linkedin && { linkedin: prefs.linkedin }),
+          ...(prefs.education && { education: prefs.education }),
+          ...(prefs.target_role && { target_role: prefs.target_role }),
+          ...(prefs.seniority && { seniority: prefs.seniority }),
+          ...(prefs.salary_expectation && { salary_expectation: prefs.salary_expectation }),
+          ...(prefs.work_authorization && { work_authorization: prefs.work_authorization }),
+        }));
+        sessionStorage.removeItem("cv_parsed_prefs");
+        sessionStorage.removeItem("cv_file_name");
+      }
+    } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

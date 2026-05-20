@@ -338,51 +338,7 @@ export default function ProfilePage() {
         {tab === "Preferences" && (
           <div className="space-y-4">
 
-            {/* Personal info */}
-            <div className="border border-border rounded-[8px] bg-surface">
-              <div className="px-5 py-4 border-b border-border">
-                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Personal info</h3>
-                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Used to auto-fill job applications</p>
-              </div>
-              <div className="p-5 space-y-4">
-                {[
-                  { key: "name", label: "Full name", type: "text", placeholder: "Jane Smith" },
-                  { key: "phone", label: "Phone", type: "tel", placeholder: "+1 555 000 0000" },
-                  { key: "linkedin", label: "LinkedIn URL", type: "url", placeholder: "https://linkedin.com/in/you" },
-                ].map((field) => (
-                  <div key={field.key}>
-                    <label className="block text-xs text-text-dimmed font-dm-sans mb-1">{field.label}</label>
-                    <input
-                      type={field.type}
-                      value={preferences[field.key as keyof typeof preferences]}
-                      onChange={(e) => setPreferences((p) => ({ ...p, [field.key]: e.target.value }))}
-                      placeholder={field.placeholder}
-                      className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Education */}
-            <div className="border border-border rounded-[8px] bg-surface">
-              <div className="px-5 py-4 border-b border-border">
-                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Education</h3>
-                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Your highest qualification</p>
-              </div>
-              <div className="p-5">
-                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Degree &amp; institution</label>
-                <input
-                  type="text"
-                  value={preferences.education}
-                  onChange={(e) => setPreferences((p) => ({ ...p, education: e.target.value }))}
-                  placeholder="BS Computer Science, MIT"
-                  className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
-              </div>
-            </div>
-
-            {/* Job preferences */}
+            {/* Job preferences — FIRST */}
             <div className="border border-border rounded-[8px] bg-surface">
               <div className="px-5 py-4 border-b border-border">
                 <h3 className="text-sm font-medium text-text-primary font-dm-sans">Job preferences</h3>
@@ -563,6 +519,50 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
+              </div>
+            </div>
+
+            {/* Personal info */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Personal info</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Used to auto-fill job applications</p>
+              </div>
+              <div className="p-5 space-y-4">
+                {[
+                  { key: "name", label: "Full name", type: "text", placeholder: "Jane Smith" },
+                  { key: "phone", label: "Phone", type: "tel", placeholder: "+1 555 000 0000" },
+                  { key: "linkedin", label: "LinkedIn URL", type: "url", placeholder: "https://linkedin.com/in/you" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-xs text-text-dimmed font-dm-sans mb-1">{field.label}</label>
+                    <input
+                      type={field.type}
+                      value={preferences[field.key as keyof typeof preferences]}
+                      onChange={(e) => setPreferences((p) => ({ ...p, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder}
+                      className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Education */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Education</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Your highest qualification</p>
+              </div>
+              <div className="p-5">
+                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Degree &amp; institution</label>
+                <input
+                  type="text"
+                  value={preferences.education}
+                  onChange={(e) => setPreferences((p) => ({ ...p, education: e.target.value }))}
+                  placeholder="BS Computer Science, MIT"
+                  className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
               </div>
             </div>
 
