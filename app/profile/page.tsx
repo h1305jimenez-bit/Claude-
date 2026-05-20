@@ -256,339 +256,409 @@ export default function ProfilePage() {
         </div>
 
         {tab === "Profile" && (
-          <div className="space-y-6">
-            <div className="border border-border rounded-[8px] p-6 bg-surface">
-              <h3 className="font-dm-sans font-medium text-text-primary mb-4">CV</h3>
-              {user?.cv_url && (
-                <p className="text-xs text-text-dimmed font-dm-sans mb-3">CV uploaded. Upload a new one to replace it.</p>
-              )}
-              <div
-                className="border-2 border-dashed border-border rounded-[8px] p-6 text-center mb-3 cursor-pointer hover:bg-surface-secondary transition-all duration-[150ms]"
-                onClick={() => document.getElementById("cv-profile-input")?.click()}
-              >
-                <input
-                  id="cv-profile-input"
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
-                />
-                {cvFile ? (
-                  <p className="text-sm font-dm-sans text-text-primary">{cvFile.name}</p>
-                ) : (
-                  <p className="text-sm text-text-dimmed font-dm-sans">Click to upload new CV (PDF)</p>
-                )}
+          <div className="space-y-4">
+            {/* Summary card */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Your details</h3>
               </div>
-              <button
-                onClick={handleCvUpload}
-                disabled={!cvFile || uploadingCv}
-                className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
-              >
-                {uploadingCv ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Uploading…</span> : "Upload CV"}
-              </button>
+              <div className="p-5 grid grid-cols-2 gap-4">
+                {[
+                  { label: "Name", value: user?.name },
+                  { label: "Email", value: user?.email },
+                  { label: "Phone", value: user?.phone },
+                  { label: "LinkedIn", value: user?.linkedin },
+                  { label: "Education", value: user?.education },
+                  { label: "Seniority", value: user?.seniority },
+                  { label: "Target role", value: user?.target_role },
+                  { label: "Location", value: user?.target_location },
+                  { label: "Work authorization", value: user?.work_authorization },
+                  { label: "Salary expectation", value: user?.salary_expectation },
+                ].map(({ label, value }) => (
+                  <div key={label} className="min-w-0">
+                    <p className="text-xs text-text-dimmed font-dm-sans mb-0.5">{label}</p>
+                    <p className="text-sm font-dm-sans text-text-primary truncate">
+                      {value || <span className="text-text-dimmed italic">Not set</span>}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="px-5 pb-4">
+                <button
+                  onClick={() => setTab("Preferences")}
+                  className="text-xs font-dm-sans text-text-dimmed hover:text-text-primary transition-all duration-[150ms] underline underline-offset-2"
+                >
+                  Edit in Preferences →
+                </button>
+              </div>
+            </div>
+
+            {/* CV upload */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">CV</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">
+                  {user?.cv_url ? "CV on file — upload a new PDF to replace it." : "Upload your CV to auto-fill preferences and generate kits."}
+                </p>
+              </div>
+              <div className="p-5">
+                <div
+                  className="border-2 border-dashed border-border rounded-[8px] p-6 text-center mb-3 cursor-pointer hover:bg-surface-secondary transition-all duration-[150ms]"
+                  onClick={() => document.getElementById("cv-profile-input")?.click()}
+                >
+                  <input
+                    id="cv-profile-input"
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
+                  />
+                  {cvFile ? (
+                    <p className="text-sm font-dm-sans text-text-primary">{cvFile.name}</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl mb-2">📄</p>
+                      <p className="text-sm text-text-dimmed font-dm-sans">Click to upload PDF</p>
+                      <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Max 10 MB</p>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={handleCvUpload}
+                  disabled={!cvFile || uploadingCv}
+                  className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
+                >
+                  {uploadingCv ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Uploading…</span> : "Upload CV"}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {tab === "Preferences" && (
           <div className="space-y-4">
-            {[
-              { key: "name", label: "Full name", type: "text" },
-              { key: "phone", label: "Phone", type: "tel" },
-              { key: "linkedin", label: "LinkedIn URL", type: "url" },
-              { key: "education", label: "Education", type: "text" },
-            ].map((field) => (
-              <div key={field.key}>
-                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">{field.label}</label>
+
+            {/* Personal info */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Personal info</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Used to auto-fill job applications</p>
+              </div>
+              <div className="p-5 space-y-4">
+                {[
+                  { key: "name", label: "Full name", type: "text", placeholder: "Jane Smith" },
+                  { key: "phone", label: "Phone", type: "tel", placeholder: "+1 555 000 0000" },
+                  { key: "linkedin", label: "LinkedIn URL", type: "url", placeholder: "https://linkedin.com/in/you" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-xs text-text-dimmed font-dm-sans mb-1">{field.label}</label>
+                    <input
+                      type={field.type}
+                      value={preferences[field.key as keyof typeof preferences]}
+                      onChange={(e) => setPreferences((p) => ({ ...p, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder}
+                      className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Education */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Education</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Your highest qualification</p>
+              </div>
+              <div className="p-5">
+                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Degree &amp; institution</label>
                 <input
-                  type={field.type}
-                  value={preferences[field.key as keyof typeof preferences]}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, [field.key]: e.target.value }))
-                  }
+                  type="text"
+                  value={preferences.education}
+                  onChange={(e) => setPreferences((p) => ({ ...p, education: e.target.value }))}
+                  placeholder="BS Computer Science, MIT"
                   className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
                 />
               </div>
-            ))}
+            </div>
 
-            {/* Target roles — multi-select */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs text-text-dimmed font-dm-sans">Target roles</label>
-                {loadingSuggestions && (
-                  <span className="flex items-center gap-1.5 text-xs text-text-dimmed font-dm-sans">
-                    <Spinner size="sm" />Suggesting…
-                  </span>
-                )}
+            {/* Job preferences */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Job preferences</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Shapes job matching and application kits</p>
               </div>
+              <div className="p-5 space-y-5">
 
-              {/* Selected roles as tags */}
-              {selectedRoles.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {selectedRoles.map((role) => (
-                    <span
-                      key={role}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full"
-                    >
-                      {role}
-                      <button
-                        onClick={() => {
-                          const updated = selectedRoles.filter(r => r !== role);
-                          setSelectedRoles(updated);
-                          setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
-                        }}
-                        className="opacity-60 hover:opacity-100 leading-none"
-                      >×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Suggestions */}
-              {suggestedRoles.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {suggestedRoles.map((role) => {
-                    const selected = selectedRoles.includes(role);
-                    return (
-                      <button
-                        key={role}
-                        onClick={() => {
-                          const updated = selected
-                            ? selectedRoles.filter(r => r !== role)
-                            : [...selectedRoles, role];
-                          setSelectedRoles(updated);
-                          setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
-                        }}
-                        className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${
-                          selected
-                            ? "border-text-primary text-text-primary bg-surface-secondary"
-                            : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"
-                        }`}
-                      >
-                        {selected ? "✓ " : ""}{role}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Manual input */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder={selectedRoles.length > 0 ? "Add another role..." : "Type a role..."}
-                  value={roleInput}
-                  onChange={(e) => setRoleInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && roleInput.trim()) {
+                {/* Target roles */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs text-text-dimmed font-dm-sans">Target roles</label>
+                    {loadingSuggestions && (
+                      <span className="flex items-center gap-1.5 text-xs text-text-dimmed font-dm-sans">
+                        <Spinner size="sm" />Suggesting…
+                      </span>
+                    )}
+                  </div>
+                  {selectedRoles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {selectedRoles.map((role) => (
+                        <span key={role} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
+                          {role}
+                          <button onClick={() => {
+                            const updated = selectedRoles.filter(r => r !== role);
+                            setSelectedRoles(updated);
+                            setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                          }} className="opacity-60 hover:opacity-100 leading-none">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {suggestedRoles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {suggestedRoles.map((role) => {
+                        const selected = selectedRoles.includes(role);
+                        return (
+                          <button key={role} onClick={() => {
+                            const updated = selected ? selectedRoles.filter(r => r !== role) : [...selectedRoles, role];
+                            setSelectedRoles(updated);
+                            setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                          }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
+                            {selected ? "✓ " : ""}{role}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder={selectedRoles.length > 0 ? "Add another role..." : "Type a role..."}
+                      value={roleInput}
+                      onChange={(e) => setRoleInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && roleInput.trim()) {
+                          const val = roleInput.trim();
+                          if (!selectedRoles.includes(val)) {
+                            const updated = [...selectedRoles, val];
+                            setSelectedRoles(updated);
+                            setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
+                          }
+                          setRoleInput("");
+                          e.preventDefault();
+                        }
+                      }}
+                      autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                      className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                    />
+                    <button onClick={() => {
                       const val = roleInput.trim();
-                      if (!selectedRoles.includes(val)) {
+                      if (val && !selectedRoles.includes(val)) {
                         const updated = [...selectedRoles, val];
                         setSelectedRoles(updated);
                         setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
                       }
                       setRoleInput("");
-                      e.preventDefault();
-                    }
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
-                <button
-                  onClick={() => {
-                    const val = roleInput.trim();
-                    if (val && !selectedRoles.includes(val)) {
-                      const updated = [...selectedRoles, val];
-                      setSelectedRoles(updated);
-                      setPreferences(p => ({ ...p, target_role: updated.join(", ") }));
-                    }
-                    setRoleInput("");
-                  }}
-                  disabled={!roleInput.trim()}
-                  className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
+                    }} disabled={!roleInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">Add</button>
+                  </div>
+                </div>
 
-            {/* Target locations — multi-select */}
-            <div>
-              <div className="mb-2">
-                <label className="block text-xs text-text-dimmed font-dm-sans mb-0.5">Target locations</label>
-                <p className="text-xs text-text-dimmed font-dm-sans opacity-60">Highlighted countries fetch jobs automatically. Others require manual job adding.</p>
-              </div>
-
-              {selectedLocations.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {selectedLocations.map((loc) => {
-                    const isSupported = SUPPORTED_LOCATIONS.some(s => s.name.toLowerCase() === loc.toLowerCase());
-                    return (
-                      <span key={loc} className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans rounded-full ${isSupported ? "bg-text-primary text-background" : "bg-surface border border-border text-text-dimmed"}`}>
-                        {isSupported ? "✓ " : "⚠ "}{loc}
-                        <button onClick={() => {
-                          const updated = selectedLocations.filter(l => l !== loc);
+                {/* Target locations */}
+                <div>
+                  <div className="mb-2">
+                    <label className="block text-xs text-text-dimmed font-dm-sans mb-0.5">Target locations</label>
+                    <p className="text-xs text-text-dimmed font-dm-sans opacity-60">Filled countries fetch jobs automatically. Others require manual job adding.</p>
+                  </div>
+                  {selectedLocations.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {selectedLocations.map((loc) => {
+                        const isSupported = SUPPORTED_LOCATIONS.some(s => s.name.toLowerCase() === loc.toLowerCase());
+                        return (
+                          <span key={loc} className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans rounded-full ${isSupported ? "bg-text-primary text-background" : "bg-surface border border-border text-text-dimmed"}`}>
+                            {isSupported ? "✓ " : "⚠ "}{loc}
+                            <button onClick={() => {
+                              const updated = selectedLocations.filter(l => l !== loc);
+                              setSelectedLocations(updated);
+                              setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                            }} className="opacity-60 hover:opacity-100">×</button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {SUPPORTED_LOCATIONS.map(({ name }) => {
+                      const selected = selectedLocations.includes(name);
+                      return (
+                        <button key={name} onClick={() => {
+                          const updated = selected ? selectedLocations.filter(l => l !== name) : [...selectedLocations, name];
                           setSelectedLocations(updated);
                           setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
-                        }} className="opacity-60 hover:opacity-100">×</button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2 mb-2">
-                {SUPPORTED_LOCATIONS.map(({ name }) => {
-                  const selected = selectedLocations.includes(name);
-                  return (
-                    <button key={name} onClick={() => {
-                      const updated = selected ? selectedLocations.filter(l => l !== name) : [...selectedLocations, name];
-                      setSelectedLocations(updated);
-                      setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
-                    }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
-                      {selected ? "✓ " : ""}{name}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Any city or country (e.g. Santiago, Chile)…"
-                  value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && locationInput.trim()) {
+                        }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
+                          {selected ? "✓ " : ""}{name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Any city or country (e.g. Santiago, Chile)…"
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && locationInput.trim()) {
+                          const val = locationInput.trim();
+                          if (!selectedLocations.includes(val)) {
+                            const updated = [...selectedLocations, val];
+                            setSelectedLocations(updated);
+                            setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
+                          }
+                          setLocationInput("");
+                          e.preventDefault();
+                        }
+                      }}
+                      autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                      className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                    />
+                    <button onClick={() => {
                       const val = locationInput.trim();
-                      if (!selectedLocations.includes(val)) {
+                      if (val && !selectedLocations.includes(val)) {
                         const updated = [...selectedLocations, val];
                         setSelectedLocations(updated);
                         setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
                       }
                       setLocationInput("");
-                      e.preventDefault();
-                    }
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
-                <button onClick={() => {
-                  const val = locationInput.trim();
-                  if (val && !selectedLocations.includes(val)) {
-                    const updated = [...selectedLocations, val];
-                    setSelectedLocations(updated);
-                    setPreferences(p => ({ ...p, target_location: updated.join(", ") }));
-                  }
-                  setLocationInput("");
-                }} disabled={!locationInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
-                  Add
-                </button>
+                    }} disabled={!locationInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">Add</button>
+                  </div>
+                </div>
+
+                {/* Seniority & Work auth side by side */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Seniority</label>
+                    <select
+                      value={preferences.seniority}
+                      onChange={(e) => setPreferences(p => ({ ...p, seniority: e.target.value }))}
+                      className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                    >
+                      <option value="">Select…</option>
+                      {["Intern", "Junior", "Mid-level", "Senior", "Lead", "Manager", "Director", "Executive"].map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Work authorization</label>
+                    <select
+                      value={preferences.work_authorization}
+                      onChange={(e) => setPreferences(p => ({ ...p, work_authorization: e.target.value }))}
+                      className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                    >
+                      <option value="">Select…</option>
+                      {["US Citizen", "Green Card", "H-1B", "OPT/CPT", "TN Visa", "E-3", "Other", "Not applicable"].map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            {/* Target companies — multi-select */}
-            <div>
-              <label className="block text-xs text-text-dimmed font-dm-sans mb-2">Target companies</label>
-              <p className="text-xs text-text-dimmed font-dm-sans mb-2 opacity-70">
-                Jobs from these companies will be prioritised when scoring matches.
-              </p>
-
-              {selectedCompanies.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {selectedCompanies.map((co) => (
-                    <span key={co} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
-                      {co}
-                      <button onClick={() => {
-                        const updated = selectedCompanies.filter(c => c !== co);
-                        setSelectedCompanies(updated);
-                        setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
-                      }} className="opacity-60 hover:opacity-100">×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2 mb-2">
-                {[
-                  "Google", "Microsoft", "Apple", "Meta", "Amazon", "Netflix",
-                  "Salesforce", "Adobe", "Atlassian", "Shopify", "Stripe", "Revolut",
-                  "McKinsey", "BCG", "Bain", "Deloitte", "Accenture",
-                  "Goldman Sachs", "JPMorgan", "BlackRock",
-                  "Spotify", "Airbnb", "Uber", "LinkedIn", "HubSpot",
-                ].map((co) => {
-                  const selected = selectedCompanies.includes(co);
-                  return (
-                    <button key={co} onClick={() => {
-                      const updated = selected ? selectedCompanies.filter(c => c !== co) : [...selectedCompanies, co];
-                      setSelectedCompanies(updated);
-                      setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
-                    }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
-                      {selected ? "✓ " : ""}{co}
-                    </button>
-                  );
-                })}
+            {/* Compensation */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Compensation</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Helps filter and tailor your applications</p>
               </div>
-
-              <div className="flex gap-2">
+              <div className="p-5">
+                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">Salary expectation</label>
                 <input
                   type="text"
-                  placeholder="Add a company..."
-                  value={companyInput}
-                  onChange={(e) => setCompanyInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && companyInput.trim()) {
-                      const val = companyInput.trim();
-                      if (!selectedCompanies.includes(val)) {
-                        const updated = [...selectedCompanies, val];
-                        setSelectedCompanies(updated);
-                        setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
-                      }
-                      setCompanyInput("");
-                      e.preventDefault();
-                    }
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
-                <button onClick={() => {
-                  const val = companyInput.trim();
-                  if (val && !selectedCompanies.includes(val)) {
-                    const updated = [...selectedCompanies, val];
-                    setSelectedCompanies(updated);
-                    setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
-                  }
-                  setCompanyInput("");
-                }} disabled={!companyInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
-                  Add
-                </button>
-              </div>
-            </div>
-
-            {[
-              { key: "seniority", label: "Seniority", type: "text" },
-              { key: "salary_expectation", label: "Salary expectation", type: "text" },
-              { key: "work_authorization", label: "Work authorization", type: "text" },
-            ].map((field) => (
-              <div key={field.key}>
-                <label className="block text-xs text-text-dimmed font-dm-sans mb-1">{field.label}</label>
-                <input
-                  type={field.type}
-                  value={preferences[field.key as keyof typeof preferences]}
-                  onChange={(e) => setPreferences((p) => ({ ...p, [field.key]: e.target.value }))}
+                  value={preferences.salary_expectation}
+                  onChange={(e) => setPreferences((p) => ({ ...p, salary_expectation: e.target.value }))}
+                  placeholder="$120,000 – $150,000"
                   className="w-full border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
                 />
               </div>
-            ))}
+            </div>
+
+            {/* Dream companies */}
+            <div className="border border-border rounded-[8px] bg-surface">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="text-sm font-medium text-text-primary font-dm-sans">Dream companies</h3>
+                <p className="text-xs text-text-dimmed font-dm-sans mt-0.5">Jobs from these companies get priority when scoring matches</p>
+              </div>
+              <div className="p-5">
+                {selectedCompanies.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedCompanies.map((co) => (
+                      <span key={co} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
+                        {co}
+                        <button onClick={() => {
+                          const updated = selectedCompanies.filter(c => c !== co);
+                          setSelectedCompanies(updated);
+                          setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                        }} className="opacity-60 hover:opacity-100">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {[
+                    "Google", "Microsoft", "Apple", "Meta", "Amazon", "Netflix",
+                    "Salesforce", "Adobe", "Atlassian", "Shopify", "Stripe", "Revolut",
+                    "McKinsey", "BCG", "Bain", "Deloitte", "Accenture",
+                    "Goldman Sachs", "JPMorgan", "BlackRock",
+                    "Spotify", "Airbnb", "Uber", "LinkedIn", "HubSpot",
+                  ].map((co) => {
+                    const selected = selectedCompanies.includes(co);
+                    return (
+                      <button key={co} onClick={() => {
+                        const updated = selected ? selectedCompanies.filter(c => c !== co) : [...selectedCompanies, co];
+                        setSelectedCompanies(updated);
+                        setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                      }} className={`px-3 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary text-text-primary bg-surface-secondary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
+                        {selected ? "✓ " : ""}{co}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add a company..."
+                    value={companyInput}
+                    onChange={(e) => setCompanyInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && companyInput.trim()) {
+                        const val = companyInput.trim();
+                        if (!selectedCompanies.includes(val)) {
+                          const updated = [...selectedCompanies, val];
+                          setSelectedCompanies(updated);
+                          setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                        }
+                        setCompanyInput("");
+                        e.preventDefault();
+                      }
+                    }}
+                    autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                    className="flex-1 border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                  />
+                  <button onClick={() => {
+                    const val = companyInput.trim();
+                    if (val && !selectedCompanies.includes(val)) {
+                      const updated = [...selectedCompanies, val];
+                      setSelectedCompanies(updated);
+                      setPreferences(p => ({ ...p, target_companies: updated.join(", ") }));
+                    }
+                    setCompanyInput("");
+                  }} disabled={!companyInput.trim()} className="px-3 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">Add</button>
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={handleSavePreferences}
               disabled={saving}
