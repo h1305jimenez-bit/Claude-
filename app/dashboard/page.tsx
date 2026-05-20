@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const [showAddJob, setShowAddJob] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [editRole, setEditRole] = useState("");
+  const [editLocation, setEditLocation] = useState("");
   const autoRefreshDone = useRef(false);
 
   const supabase = createBrowserSupabase();
@@ -47,6 +49,8 @@ export default function DashboardPage() {
       if (userData[0]) {
         const u = userData[0];
         setUser(u);
+        setEditRole(u.target_role || "");
+        setEditLocation(u.target_location || "");
         const today = new Date().toDateString();
         const resetDate = u.daily_refreshes_reset_at
           ? new Date(u.daily_refreshes_reset_at).toDateString()
@@ -140,6 +144,25 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSearch = async () => {
+    if (!accessToken) return;
+    // Save updated role/location to profile first
+    const trimRole = editRole.trim();
+    const trimLoc = editLocation.trim();
+    if (trimRole || trimLoc) {
+      await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "x-access-token": accessToken, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(trimRole && { target_role: trimRole }),
+          ...(trimLoc && { target_location: trimLoc }),
+        }),
+      });
+      setUser(u => u ? { ...u, target_role: trimRole || u.target_role, target_location: trimLoc || u.target_location } : u);
+    }
+    await triggerRefresh(true);
+  };
+
   const triggerRefresh = async (manual = true, tokenOverride?: string) => {
     if (manual && remaining <= 0 && user?.plan !== "paid") {
       setError("Daily refresh limit reached. Try again tomorrow.");
@@ -202,40 +225,46 @@ export default function DashboardPage() {
       <div className="ml-56 flex-1 flex">
         {/* Main content */}
         <main className="flex-1 p-8 max-w-3xl">
-          <div className="mb-8 flex items-start justify-between">
-            <div>
-              <h1 className="font-syne font-bold text-2xl text-text-primary mb-1">
-                {user?.target_role ? `Jobs for ${user.target_role}` : "Your jobs"}
-              </h1>
-              <p className="text-text-dimmed text-sm font-dm-sans mb-2">
-                Matched to your CV · scored by AI
-              </p>
-              {user && (
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    user.target_location,
-                    user.seniority,
-                    user.work_authorization,
-                    user.target_companies,
-                  ]
-                    .flatMap(v => v ? v.split(",").map(s => s.trim()).filter(Boolean) : [])
-                    .map((chip, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-dm-sans bg-surface border border-border text-text-dimmed"
-                      >
-                        {chip}
-                      </span>
-                    ))}
-                </div>
-              )}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="font-syne font-bold text-2xl text-text-primary">Your matches</h1>
+              <button
+                onClick={() => setShowAddJob(true)}
+                className="shrink-0 px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
+              >
+                + Add job
+              </button>
             </div>
-            <button
-              onClick={() => setShowAddJob(true)}
-              className="shrink-0 px-4 py-2 border border-border rounded-[8px] text-sm font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface transition-all duration-[150ms]"
-            >
-              + Add job
-            </button>
+
+            {/* Inline search bar */}
+            <div className="border border-border rounded-[8px] p-4 bg-surface">
+              <p className="text-xs text-text-dimmed font-dm-sans mb-3">Search for</p>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  placeholder="Target role (e.g. Product Manager)"
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="flex-1 min-w-[180px] border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary placeholder:text-text-dimmed focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
+                <input
+                  type="text"
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                  placeholder="Location (e.g. London, UK)"
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="flex-1 min-w-[160px] border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary placeholder:text-text-dimmed focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={refreshing || (!editRole.trim() && !editLocation.trim())}
+                  className="px-5 py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40 shrink-0"
+                >
+                  {refreshing ? "Searching…" : "Search →"}
+                </button>
+              </div>
+            </div>
           </div>
 
           {showAddJob && (
