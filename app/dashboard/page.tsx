@@ -22,8 +22,12 @@ export default function DashboardPage() {
   const [showAddJob, setShowAddJob] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const [editRole, setEditRole] = useState("");
-  const [editLocation, setEditLocation] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [customRoleInput, setCustomRoleInput] = useState("");
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [customLocationInput, setCustomLocationInput] = useState("");
+  const [suggestedRoles, setSuggestedRoles] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const autoRefreshDone = useRef(false);
 
   const supabase = createBrowserSupabase();
@@ -49,8 +53,16 @@ export default function DashboardPage() {
       if (userData[0]) {
         const u = userData[0];
         setUser(u);
-        setEditRole(u.target_role || "");
-        setEditLocation(u.target_location || "");
+        setSelectedRoles(u.target_role ? u.target_role.split(",").map((r: string) => r.trim()).filter(Boolean) : []);
+        setSelectedLocations(u.target_location ? u.target_location.split(",").map((l: string) => l.trim()).filter(Boolean) : []);
+        if (u.cv_text) {
+          setLoadingSuggestions(true);
+          fetch("/api/user/suggest-roles", { method: "POST", headers: { "x-access-token": token } })
+            .then(r => r.json())
+            .then((d: { suggestions?: string[] }) => { if (d.suggestions) setSuggestedRoles(d.suggestions); })
+            .catch(() => {})
+            .finally(() => setLoadingSuggestions(false));
+        }
         const today = new Date().toDateString();
         const resetDate = u.daily_refreshes_reset_at
           ? new Date(u.daily_refreshes_reset_at).toDateString()
@@ -144,21 +156,46 @@ export default function DashboardPage() {
     }
   };
 
+  const addRole = (role: string) => {
+    const trimmed = role.trim();
+    if (!trimmed || selectedRoles.includes(trimmed)) return;
+    setSelectedRoles(prev => [...prev, trimmed]);
+    setCustomRoleInput("");
+  };
+
+  const removeRole = (role: string) => setSelectedRoles(prev => prev.filter(r => r !== role));
+
+  const toggleLocation = (loc: string) => {
+    setSelectedLocations(prev =>
+      prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc]
+    );
+  };
+
+  const addCustomLocation = (loc: string) => {
+    const trimmed = loc.trim();
+    if (!trimmed || selectedLocations.includes(trimmed)) return;
+    setSelectedLocations(prev => [...prev, trimmed]);
+    setCustomLocationInput("");
+  };
+
   const handleSearch = async () => {
     if (!accessToken) return;
-    // Save updated role/location to profile first
-    const trimRole = editRole.trim();
-    const trimLoc = editLocation.trim();
-    if (trimRole || trimLoc) {
+    const allRoles = [...selectedRoles, ...(customRoleInput.trim() ? [customRoleInput.trim()] : [])];
+    const allLocs = [...selectedLocations, ...(customLocationInput.trim() ? [customLocationInput.trim()] : [])];
+    if (customRoleInput.trim()) addRole(customRoleInput.trim());
+    if (customLocationInput.trim()) addCustomLocation(customLocationInput.trim());
+    const roleStr = allRoles.join(", ");
+    const locStr = allLocs.join(", ");
+    if (roleStr || locStr) {
       await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "x-access-token": accessToken, "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(trimRole && { target_role: trimRole }),
-          ...(trimLoc && { target_location: trimLoc }),
+          ...(roleStr && { target_role: roleStr }),
+          ...(locStr && { target_location: locStr }),
         }),
       });
-      setUser(u => u ? { ...u, target_role: trimRole || u.target_role, target_location: trimLoc || u.target_location } : u);
+      setUser(u => u ? { ...u, target_role: roleStr || u.target_role, target_location: locStr || u.target_location } : u);
     }
     await triggerRefresh(true);
   };
@@ -236,30 +273,119 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Inline search bar */}
-            <div className="border border-border rounded-[8px] p-4 bg-surface">
-              <p className="text-xs text-text-dimmed font-dm-sans mb-3">Search for</p>
-              <div className="flex gap-2 flex-wrap">
-                <input
-                  type="text"
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value)}
-                  placeholder="Target role (e.g. Product Manager)"
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="flex-1 min-w-[180px] border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary placeholder:text-text-dimmed focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
-                <input
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  placeholder="Location (e.g. London, UK)"
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="flex-1 min-w-[160px] border border-border rounded-[8px] px-3 py-2 text-sm font-dm-sans bg-background text-text-primary placeholder:text-text-dimmed focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
-                />
+            {/* Inline search panel */}
+            <div className="border border-border rounded-[8px] bg-surface divide-y divide-border">
+
+              {/* Roles section */}
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-text-primary font-dm-sans">Target roles</p>
+                  {loadingSuggestions && (
+                    <span className="flex items-center gap-1 text-xs text-text-dimmed font-dm-sans">
+                      <div className="w-3 h-3 border border-border border-t-text-dimmed rounded-full animate-spin" />
+                      Suggesting from CV…
+                    </span>
+                  )}
+                </div>
+
+                {/* Selected role chips */}
+                {selectedRoles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {selectedRoles.map(role => (
+                      <span key={role} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-dm-sans bg-text-primary text-background rounded-full">
+                        {role}
+                        <button onClick={() => removeRole(role)} className="opacity-60 hover:opacity-100 leading-none ml-0.5">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* AI suggestions */}
+                {suggestedRoles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {suggestedRoles.filter(r => !selectedRoles.includes(r)).map(role => (
+                      <button key={role} onClick={() => addRole(role)}
+                        className="px-2.5 py-1 text-xs font-dm-sans border border-border rounded-full text-text-dimmed hover:border-text-primary hover:text-text-primary transition-all duration-[150ms]">
+                        + {role}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Custom role input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customRoleInput}
+                    onChange={(e) => setCustomRoleInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && customRoleInput.trim()) { addRole(customRoleInput); e.preventDefault(); } }}
+                    placeholder="Type a role and press Enter…"
+                    autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                    className="flex-1 border border-border rounded-[8px] px-3 py-1.5 text-sm font-dm-sans bg-background text-text-primary placeholder:text-text-dimmed focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                  />
+                  <button onClick={() => addRole(customRoleInput)} disabled={!customRoleInput.trim()}
+                    className="px-3 py-1.5 border border-border rounded-[8px] text-xs font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Locations section */}
+              <div className="p-4">
+                <p className="text-xs font-medium text-text-primary font-dm-sans mb-2">Location</p>
+
+                {/* Selected location chips */}
+                {selectedLocations.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {selectedLocations.map(loc => {
+                      const supported = SUPPORTED_LOCATIONS.some(s => s.name.toLowerCase() === loc.toLowerCase());
+                      return (
+                        <span key={loc} className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-dm-sans rounded-full ${supported ? "bg-text-primary text-background" : "bg-surface border border-border text-text-dimmed"}`}>
+                          {loc}
+                          <button onClick={() => toggleLocation(loc)} className="opacity-60 hover:opacity-100 leading-none ml-0.5">×</button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Supported country chips */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {SUPPORTED_LOCATIONS.map(({ name }) => {
+                    const selected = selectedLocations.includes(name);
+                    return (
+                      <button key={name} onClick={() => toggleLocation(name)}
+                        className={`px-2.5 py-1 text-xs font-dm-sans border rounded-full transition-all duration-[150ms] ${selected ? "border-text-primary bg-surface-secondary text-text-primary" : "border-border text-text-dimmed hover:border-text-primary hover:text-text-primary"}`}>
+                        {selected ? "✓ " : ""}{name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom location input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customLocationInput}
+                    onChange={(e) => setCustomLocationInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && customLocationInput.trim()) { addCustomLocation(customLocationInput); e.preventDefault(); } }}
+                    placeholder="Any city or country (e.g. Santiago, Chile)…"
+                    autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                    className="flex-1 border border-border rounded-[8px] px-3 py-1.5 text-sm font-dm-sans bg-background text-text-primary placeholder:text-text-dimmed focus:outline-none focus:border-text-primary transition-all duration-[150ms]"
+                  />
+                  <button onClick={() => addCustomLocation(customLocationInput)} disabled={!customLocationInput.trim()}
+                    className="px-3 py-1.5 border border-border rounded-[8px] text-xs font-dm-sans text-text-dimmed hover:text-text-primary hover:bg-surface-secondary transition-all duration-[150ms] disabled:opacity-40">
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Search button */}
+              <div className="px-4 py-3 flex justify-end">
                 <button
                   onClick={handleSearch}
-                  disabled={refreshing || (!editRole.trim() && !editLocation.trim())}
-                  className="px-5 py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40 shrink-0"
+                  disabled={refreshing || (selectedRoles.length === 0 && !customRoleInput.trim())}
+                  className="px-6 py-2 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-40"
                 >
                   {refreshing ? "Searching…" : "Search →"}
                 </button>
