@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { anthropic } from "@/lib/anthropic";
-import { fetchAdzunaJobs, SUPPORTED_LOCATIONS } from "@/lib/adzuna";
+import { fetchAdzunaJobs } from "@/lib/adzuna";
 
 export const maxDuration = 60;
-
-const ADZUNA_SUPPORTED = new Set(SUPPORTED_LOCATIONS.map(l => l.name.toLowerCase()));
 
 type ExtractedPrefs = {
   name: string; target_role: string; target_location: string;
@@ -54,22 +52,17 @@ export async function POST(req: NextRequest) {
   try {
     const { prefs, cvText } = await extractFromCv(buffer);
     const role = prefs.target_role || "Software Engineer";
-    const location = prefs.target_location || "";
 
-    // Fetch up to 15 jobs from Adzuna (or skip if unsupported)
-    const locLower = location.toLowerCase();
-    const isAdzunaSupported = !location || ADZUNA_SUPPORTED.has(locLower) ||
-      [...ADZUNA_SUPPORTED].some(s => locLower.includes(s) || s.includes(locLower));
-
-    let rawJobs = isAdzunaSupported ? await fetchAdzunaJobs(role, location) : [];
-    if (rawJobs.length === 0 && location) rawJobs = await fetchAdzunaJobs(role, "");
-    const jobsToScore = rawJobs.slice(0, 12);
+    // Always search worldwide (no location) — Adzuna fans out across US, UK, CA, AU, DE, SG
+    const allJobs = await fetchAdzunaJobs(role, "");
+    const totalCount = allJobs.length;
+    const jobsToScore = allJobs.slice(0, 10);
 
     if (jobsToScore.length === 0) {
-      return NextResponse.json({ prefs, jobs: [] });
+      return NextResponse.json({ prefs, jobs: [], totalCount: 0 });
     }
 
-    const candidateContext = `Role: ${role}\nLocation: ${location || "Any"}\nSeniority: ${prefs.seniority || "Not specified"}\nBackground: ${cvText.slice(0, 1200)}`;
+    const candidateContext = `Role: ${role}\nSeniority: ${prefs.seniority || "Not specified"}\nBackground: ${cvText.slice(0, 1200)}`;
 
     const prompt = `Score these ${jobsToScore.length} jobs for this candidate. Return ONLY a valid JSON array with exactly ${jobsToScore.length} objects.
 
@@ -78,16 +71,15 @@ ${candidateContext}
 
 JOBS:
 ${jobsToScore.map((job, i) => `--- JOB ${i + 1} ---
-Company: ${job.company?.display_name || "Unknown"}
 Title: ${job.title}
 Location: ${job.location?.display_name || ""}
-Description: ${(job.description || "").slice(0, 500)}`).join("\n\n")}
+Description: ${(job.description || "").slice(0, 400)}`).join("\n\n")}
 
-Return JSON array (same order): [{"score":<0-100>,"rationale":"<2 sentences: overall match and key reason>"}]`;
+Return JSON array (same order): [{"score":<0-100>,"rationale":"<1 sentence: key reason this matches or doesn't>"}]`;
 
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1500,
+      max_tokens: 1000,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -97,19 +89,15 @@ Return JSON array (same order): [{"score":<0-100>,"rationale":"<2 sentences: ove
 
     const jobs = jobsToScore.map((job, i) => ({
       id: job.id,
-      company: job.company?.display_name || "Unknown",
       role: job.title,
       location: job.location?.display_name || "",
       score: scores[i]?.score ?? 50,
-      score_rationale: scores[i]?.rationale ?? "",
-      url: job.redirect_url,
-      description: (job.description || "").slice(0, 400),
-      posted_date: job.created,
+      rationale: scores[i]?.rationale ?? "",
     }));
 
     jobs.sort((a, b) => b.score - a.score);
 
-    return NextResponse.json({ prefs, jobs });
+    return NextResponse.json({ prefs, jobs, totalCount });
   } catch (e) {
     console.error("jobs/preview error:", e);
     return NextResponse.json({ error: (e as { message?: string }).message ?? "Preview failed" }, { status: 500 });

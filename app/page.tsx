@@ -13,18 +13,28 @@ type ParsedPrefs = {
 };
 
 type PreviewJob = {
-  id: string; company: string; role: string; location: string;
-  score: number; score_rationale: string; url: string; description: string;
+  id: string; role: string; location: string;
+  score: number; rationale: string;
 };
 
-type Step = "upload" | "searching" | "results" | "signup";
+type Step = "upload" | "searching" | "results";
 
 function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 75 ? "bg-text-primary text-background" : score >= 50 ? "bg-surface-secondary text-text-primary border border-border" : "bg-surface border border-border text-text-dimmed";
+  const color = score >= 75
+    ? "bg-text-primary text-background"
+    : score >= 50
+      ? "bg-surface-secondary text-text-primary border border-border"
+      : "bg-surface border border-border text-text-dimmed";
   return (
     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-[8px] text-sm font-bold font-syne shrink-0 ${color}`}>
       {score}
     </span>
+  );
+}
+
+function Redacted({ width = "w-28" }: { width?: string }) {
+  return (
+    <span className={`inline-block ${width} h-3.5 rounded bg-surface-secondary align-middle`} />
   );
 }
 
@@ -33,6 +43,7 @@ function LandingFlow() {
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedPrefs | null>(null);
   const [previewJobs, setPreviewJobs] = useState<PreviewJob[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [searchError, setSearchError] = useState("");
 
   const [mode, setMode] = useState<"signup" | "login">("signup");
@@ -56,10 +67,14 @@ function LandingFlow() {
         headers: { "Content-Type": "application/pdf" },
         body: f,
       });
-      const data = await res.json() as { prefs?: ParsedPrefs; jobs?: PreviewJob[]; error?: string };
+      const data = await res.json() as {
+        prefs?: ParsedPrefs; jobs?: PreviewJob[];
+        totalCount?: number; error?: string;
+      };
       if (!res.ok) throw new Error(data.error ?? "Search failed");
       setParsed(data.prefs ?? null);
       setPreviewJobs(data.jobs ?? []);
+      setTotalCount(data.totalCount ?? data.jobs?.length ?? 0);
       setName(data.prefs?.name ?? "");
       setStep("results");
     } catch (e) {
@@ -114,14 +129,14 @@ function LandingFlow() {
       <main className="flex-1 flex flex-col items-center px-4 py-10">
         <div className="w-full max-w-2xl">
 
-          {/* Upload step */}
+          {/* Upload */}
           {step === "upload" && (
             <div className="flex flex-col items-center text-center">
               <h1 className="font-syne font-bold text-3xl text-text-primary mb-3">
                 Upload your CV.<br />See your matches instantly.
               </h1>
               <p className="text-text-dimmed text-sm font-dm-sans mb-8 max-w-sm">
-                We&apos;ll parse your CV, find live jobs that match your background, and score each one — free, no sign-up required.
+                We&apos;ll scan your CV, find live job openings across 6 countries, and score each one — free, no sign-up required.
               </p>
 
               <div
@@ -150,78 +165,78 @@ function LandingFlow() {
             </div>
           )}
 
-          {/* Searching step */}
+          {/* Searching */}
           {step === "searching" && (
             <div className="flex flex-col items-center text-center py-20">
               <Spinner size="lg" />
-              <p className="mt-4 text-sm font-dm-sans text-text-primary font-medium">Analysing your CV and finding matches…</p>
+              <p className="mt-4 text-sm font-dm-sans text-text-primary font-medium">Scanning jobs across 6 countries…</p>
               <p className="mt-1 text-xs text-text-dimmed font-dm-sans">{file?.name}</p>
             </div>
           )}
 
-          {/* Results step */}
+          {/* Results */}
           {step === "results" && (
             <>
-              {/* Profile snippet */}
-              {parsed && (
-                <div className="border border-border rounded-[8px] p-4 bg-surface mb-5 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-dm-sans font-medium text-text-primary truncate">
-                      {parsed.name || "Your profile"}
-                    </p>
-                    <p className="text-xs text-text-dimmed font-dm-sans">
-                      {[parsed.target_role, parsed.seniority, parsed.target_location].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => { setStep("upload"); setFile(null); setParsed(null); setPreviewJobs([]); }}
-                    className="text-xs text-text-dimmed hover:text-text-primary font-dm-sans shrink-0 transition-all duration-[150ms]"
-                  >
-                    ← Change CV
-                  </button>
-                </div>
-              )}
-
-              {/* Job results */}
-              {previewJobs.length > 0 ? (
-                <>
-                  <p className="text-xs text-text-dimmed font-dm-sans mb-3">
-                    {previewJobs.length} matches found for <strong className="text-text-primary">{parsed?.target_role || "your role"}</strong>
-                    {parsed?.target_location ? ` in ${parsed.target_location}` : ""} — sorted by fit
+              {/* Hero count */}
+              <div className="text-center mb-8">
+                <p className="font-syne font-extrabold text-6xl text-text-primary mb-2">{totalCount}</p>
+                <p className="text-lg font-dm-sans text-text-primary font-medium">
+                  open roles match your profile worldwide
+                </p>
+                {parsed?.target_role && (
+                  <p className="text-sm text-text-dimmed font-dm-sans mt-1">
+                    Searching for <strong className="text-text-primary">{parsed.target_role}</strong>
+                    {parsed.seniority ? ` · ${parsed.seniority}` : ""}
                   </p>
-                  <div className="space-y-2 mb-6">
-                    {previewJobs.slice(0, 6).map((job) => (
-                      <div key={job.id} className="border border-border rounded-[8px] p-4 bg-surface flex items-start gap-3">
+                )}
+                <button
+                  onClick={() => { setStep("upload"); setFile(null); setParsed(null); setPreviewJobs([]); }}
+                  className="mt-2 text-xs text-text-dimmed font-dm-sans hover:text-text-primary transition-all duration-[150ms] underline underline-offset-2"
+                >
+                  ← Try a different CV
+                </button>
+              </div>
+
+              {/* Teaser job cards */}
+              {previewJobs.length > 0 && (
+                <div className="relative mb-6">
+                  <div className="space-y-2">
+                    {previewJobs.slice(0, 5).map((job, i) => (
+                      <div
+                        key={job.id}
+                        className={`border border-border rounded-[8px] p-4 bg-surface flex items-start gap-3 transition-all duration-[150ms] ${i >= 3 ? "opacity-40" : ""}`}
+                      >
                         <ScoreBadge score={job.score} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-dm-sans font-medium text-text-primary truncate">{job.role}</p>
-                          <p className="text-xs text-text-dimmed font-dm-sans">{job.company} · {job.location}</p>
-                          <p className="text-xs text-text-dimmed font-dm-sans mt-1 line-clamp-2">{job.score_rationale}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {/* Company name redacted */}
+                            <Redacted width="w-24" />
+                            <span className="text-text-dimmed text-xs font-dm-sans">·</span>
+                            <p className="text-xs text-text-dimmed font-dm-sans">{job.location}</p>
+                          </div>
+                          <p className="text-xs text-text-dimmed font-dm-sans mt-1 line-clamp-1">{job.rationale}</p>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {previewJobs.length > 6 && (
-                    <p className="text-xs text-text-dimmed font-dm-sans text-center mb-4">
-                      +{previewJobs.length - 6} more matches after sign-up
-                    </p>
-                  )}
-                </>
-              ) : (
-                <div className="border border-border rounded-[8px] p-8 text-center bg-surface mb-6">
-                  <p className="text-sm text-text-dimmed font-dm-sans">No matches found for your location yet.</p>
-                  <p className="text-xs text-text-dimmed font-dm-sans mt-1">Sign up to add jobs manually and generate your application kit.</p>
+                  {/* Fade-out overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent pointer-events-none" />
                 </div>
               )}
 
-              {/* Sign up CTA */}
+              <p className="text-xs text-center text-text-dimmed font-dm-sans mb-5">
+                🔒 Sign up to see company names, apply, and generate your full application kit
+              </p>
+
+              {/* Sign-up box */}
               <div className="border-2 border-btn-bg rounded-[8px] p-6 bg-surface">
                 <h2 className="font-syne font-bold text-lg text-text-primary mb-1">
-                  {previewJobs.length > 0 ? "Apply to these jobs in 3 minutes" : "Get started with Applykit"}
+                  Unlock {totalCount} matches — free
                 </h2>
                 <p className="text-xs text-text-dimmed font-dm-sans mb-4">
-                  Create a free account to apply, generate cover letters, tailored CVs, and screening answers.
+                  See every company, apply in 3 minutes, and get a full kit: cover letter, tailored CV &amp; screening answers.
                 </p>
 
                 <div className="flex border border-border rounded-[8px] p-1 mb-4">
@@ -250,7 +265,7 @@ function LandingFlow() {
                     className="w-full py-2.5 bg-btn-bg text-btn-text rounded-[8px] text-sm font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms] disabled:opacity-50">
                     {authLoading
                       ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />{mode === "signup" ? "Creating account…" : "Logging in…"}</span>
-                      : mode === "signup" ? "Create free account →" : "Log in →"}
+                      : mode === "signup" ? `Unlock my ${totalCount} matches →` : "Log in →"}
                   </button>
                 </form>
               </div>
