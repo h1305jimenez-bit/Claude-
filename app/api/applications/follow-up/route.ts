@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin, createApiClient } from "@/lib/supabase";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 import type { User } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -47,11 +47,11 @@ Return ONLY valid JSON:
   "body": "<email body, 3-4 sentences, professional and direct>"
 }`;
 
-    const response = await anthropic.messages.create({
+    const response = await callAnthropic(() => anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 500,
       messages: [{ role: "user", content: followUpPrompt }],
-    });
+    }));
 
     const content = response.content[0];
     if (content.type !== "text") {
@@ -66,6 +66,7 @@ Return ONLY valid JSON:
     const parsed = JSON.parse(jsonMatch[0]) as { subject: string; body: string };
     return NextResponse.json(parsed);
   } catch (err) {
+    if (err instanceof AiBusyError) return NextResponse.json({ error: "ai_busy" }, { status: 429 });
     console.error("follow-up error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

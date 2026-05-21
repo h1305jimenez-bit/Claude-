@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -11,7 +11,7 @@ type ExtractedPrefs = {
 
 async function extractPrefs(buffer: Buffer): Promise<{ prefs: ExtractedPrefs; error?: string }> {
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await callAnthropic(() => anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 512,
       messages: [{
@@ -28,7 +28,7 @@ name, phone, linkedin, education (degree + institution), target_role (most recen
           },
         ],
       }],
-    });
+    }));
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { prefs: {} as ExtractedPrefs, error: `no-json: ${raw.slice(0, 200)}` };
@@ -40,7 +40,7 @@ name, phone, linkedin, education (degree + institution), target_role (most recen
 
 async function extractCvText(buffer: Buffer): Promise<string> {
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await callAnthropic(() => anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2048,
       messages: [{
@@ -56,7 +56,7 @@ async function extractCvText(buffer: Buffer): Promise<string> {
           },
         ],
       }],
-    });
+    }));
     const text = msg.content[0].type === "text" ? msg.content[0].text : "";
     return text.slice(0, 6000);
   } catch {
@@ -135,6 +135,7 @@ export async function POST(req: NextRequest) {
       prefs: prefsError ? {} : prefs,
     });
   } catch (err) {
+    if (err instanceof AiBusyError) return NextResponse.json({ error: "ai_busy" }, { status: 429 });
     const msg = (err as { message?: string }).message ?? String(err);
     console.error(`upload-cv [${step}]:`, msg);
     return NextResponse.json({ error: `[${step}] ${msg}` }, { status: 500 });

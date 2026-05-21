@@ -219,6 +219,8 @@ export default function DashboardPage() {
         if (data.error === "daily_limit_reached") {
           setError("Daily refresh limit reached.");
           setRemaining(0);
+        } else if (data.error === "ai_busy") {
+          setError("Our AI is under heavy load — wait 30 seconds and try again.");
         } else {
           setError(data.error ?? `Server error ${res.status}`);
         }

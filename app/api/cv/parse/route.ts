@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 
 export async function POST(req: NextRequest) {
   const arrayBuffer = await req.arrayBuffer();
@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(arrayBuffer);
 
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await callAnthropic(() => anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 512,
       messages: [{
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
           },
         ],
       }],
-    });
+    }));
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: "Could not parse CV" }, { status: 422 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 import { fetchAdzunaJobs, SUPPORTED_LOCATIONS } from "@/lib/adzuna";
 import { fetchGoogleJobs } from "@/lib/serpapi";
 import { fetchJoobleJobs } from "@/lib/jooble";
@@ -262,11 +262,11 @@ Description: ${(job.description || "").slice(0, 600)}`).join("\n\n")}
 Return a JSON array of ${batch.length} objects (same order as jobs above):
 [{"score":<0-100>,"rationale":"<3 sentences: (1) overall match, (2) specific skills that align, (3) gap or caveat>","portal":"<Workday/Greenhouse/Lever/Other>","needsLogin":<bool>,"steps":<1-8>,"estimatedMinutes":<number>,"tip":"<one actionable tip>","careerUrl":"<direct URL to company job posting — extract from description or use known careers page. Empty string if unknown>"}]`;
 
-        const response = await anthropic.messages.create({
+        const response = await callAnthropic(() => anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 2000,
           messages: [{ role: "user", content: batchPrompt }],
-        });
+        }));
 
         const content = response.content[0];
         if (content.type !== "text") throw new Error("no text");
@@ -417,6 +417,9 @@ Return a JSON array of ${batch.length} objects (same order as jobs above):
       debug: { searchQuery, adzunaCount, adzunaError, worldwideDebug, joobleKeySet: !!process.env.JOOBLE_API_KEY, jsearchKeySet: !!process.env.JSEARCH_API_KEY, serpApiKeySet: !!process.env.SERPAPI_KEY, scored: scoredJobs.length, scoringErrors, deleteStatus, deleteBody, upsertStatus, upsertBody, sampleUrls: scoredJobs.slice(0, 3).map((j: { company: string; url: string }) => ({ company: j.company, url: j.url })) },
     });
   } catch (err) {
+    if (err instanceof AiBusyError) {
+      return NextResponse.json({ error: "ai_busy" }, { status: 429 });
+    }
     console.error("jobs/fetch error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

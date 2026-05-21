@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin, createApiClient } from "@/lib/supabase";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -111,6 +111,7 @@ Description: ${description.trim().slice(0, 1500)}
 
     return NextResponse.json({ job });
   } catch (err) {
+    if (err instanceof AiBusyError) return NextResponse.json({ error: "ai_busy" }, { status: 429 });
     const msg = (err as { message?: string }).message ?? String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

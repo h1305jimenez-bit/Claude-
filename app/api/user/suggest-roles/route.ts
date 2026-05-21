@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Upload your CV first to get role suggestions." }, { status: 400 });
   }
 
-  const msg = await anthropic.messages.create({
+  const msg = await callAnthropic(() => anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 256,
     messages: [{
@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
       content: `Based on this CV, suggest 6 specific job titles this person should search for on job boards like Adzuna or LinkedIn. Return ONLY a JSON array of strings — short, standard titles that recruiters actually use (e.g. "Investment Analyst", "M&A Associate", "Private Equity Analyst"). No descriptions, no numbering, just the array.
 
 CV (excerpt):
-${user.cv_text.slice(0, 2000)}`,
+${(user.cv_text ?? "").slice(0, 2000)}`,
     }],
-  });
+  }));
 
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
   const match = raw.match(/\[[\s\S]*\]/);

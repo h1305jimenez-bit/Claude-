@@ -71,7 +71,10 @@ function LandingFlow() {
         prefs?: ParsedPrefs; jobs?: PreviewJob[];
         totalCount?: number; error?: string;
       };
-      if (!res.ok) throw new Error(data.error ?? "Search failed");
+      if (!res.ok) {
+        if (data.error === "ai_busy") throw new Error("Our AI is under heavy load — wait 30 seconds and try again.");
+        throw new Error(data.error ?? "Search failed");
+      }
       setParsed(data.prefs ?? null);
       setPreviewJobs(data.jobs ?? []);
       setTotalCount(data.totalCount ?? data.jobs?.length ?? 0);

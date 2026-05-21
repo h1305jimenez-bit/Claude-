@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin, createApiClient } from "@/lib/supabase";
-import { anthropic } from "@/lib/anthropic";
+import { anthropic, callAnthropic, AiBusyError } from "@/lib/anthropic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const job = jobRes.data;
     const userData = userRes.data;
 
-    const msg = await anthropic.messages.create({
+    const msg = await callAnthropic(() => anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2048,
       messages: [{
@@ -65,7 +65,7 @@ Rules:
 - suggested_insights: 3 ready-to-use talking points the applicant can include in a cover letter
 - research_topics: 3 topics the applicant should research before applying`,
       }],
-    });
+    }));
 
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -86,6 +86,7 @@ Rules:
 
     return NextResponse.json({ insights: saved });
   } catch (err) {
+    if (err instanceof AiBusyError) return NextResponse.json({ error: "ai_busy" }, { status: 429 });
     const msg = (err as { message?: string }).message ?? String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
