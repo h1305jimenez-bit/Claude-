@@ -1,146 +1,129 @@
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import { GIROS } from "@/lib/templates";
 
-export default function LandingPage() {
+export default function HomePage() {
   return (
-    <main className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <span className="font-syne font-bold text-xl text-text-primary">ApplyPilot</span>
-          <div className="flex items-center gap-4">
-            <Link href="/auth" className="text-sm text-text-dimmed hover:text-text-primary transition-all duration-[150ms] font-dm-sans">
-              Log in
-            </Link>
-            <Link href="/auth" className="text-sm px-4 py-2 bg-btn-bg text-btn-text rounded-[8px] font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
-              Get started free
-            </Link>
-          </div>
-        </div>
-      </header>
+    <>
+      <Navbar />
 
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 py-24 text-center">
-        <h1 className="font-syne font-extrabold text-5xl md:text-6xl text-text-primary leading-tight mb-6">
-          Know what you&apos;re walking into.<br />Apply in 3 minutes.
-        </h1>
-        <p className="text-lg text-text-dimmed font-dm-sans font-light max-w-xl mx-auto mb-10">
-          ApplyPilot fetches jobs matched to your CV, scores them, and generates a full application kit — cover letter, tailored CV, and screening answers.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/auth" className="px-6 py-3 bg-btn-bg text-btn-text rounded-[8px] font-dm-sans font-medium hover:opacity-90 transition-all duration-[150ms]">
-            Get started free →
-          </Link>
-          <Link href="/waitlist" className="px-6 py-3 border border-border text-text-primary rounded-[8px] font-dm-sans hover:bg-surface transition-all duration-[150ms]">
-            Join waitlist
-          </Link>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-200 opacity-40 blur-3xl" />
+        <div className="container-tv relative py-20 text-center sm:py-28">
+          <span className="chip">🚀 Tu negocio en línea en segundos</span>
+          <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-6xl">
+            Crea la <span className="text-brand-500">página y tienda</span> de tu
+            negocio en segundos
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">
+            Describe tu negocio y la inteligencia artificial arma tu página
+            profesional. ¿No quieres tienda propia? Sube tu producto a nuestro
+            marketplace y <strong className="text-ink">nosotros lo vendemos por ti</strong>.
+          </p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href="/crear" className="btn-primary">
+              Crear mi página gratis →
+            </Link>
+            <Link href="/marketplace" className="btn-ghost">
+              Ver el marketplace
+            </Link>
+          </div>
+          <p className="mt-4 text-sm text-muted">
+            Sin tarjeta · Sin conocimientos técnicos · Listo en minutos
+          </p>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="border-t border-border py-20">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">How it works</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                step: "01",
-                title: "Upload your CV",
-                desc: "Upload your PDF. We parse it and build your profile.",
-              },
-              {
-                step: "02",
-                title: "Get matched jobs",
-                desc: "We fetch live jobs from Adzuna and score each one against your CV.",
-              },
-              {
-                step: "03",
-                title: "Apply with a full kit",
-                desc: "Generate a cover letter, tailored CV, and screening answers in seconds.",
-              },
-            ].map((item) => (
-              <div key={item.step} className="border border-border rounded-[8px] p-6 bg-surface">
-                <span className="font-syne font-bold text-3xl text-text-dimmed block mb-3">{item.step}</span>
-                <h3 className="font-dm-sans font-medium text-text-primary mb-2">{item.title}</h3>
-                <p className="text-sm text-text-dimmed font-dm-sans font-light">{item.desc}</p>
+      {/* Dos caminos */}
+      <section className="container-tv py-12">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-card border border-brand-100 bg-white p-8 shadow-card">
+            <div className="text-3xl">🏪</div>
+            <h2 className="mt-4 text-2xl font-bold text-ink">Tu propia tienda</h2>
+            <p className="mt-2 text-muted">
+              Tu página con tu marca, tu catálogo y tu botón de WhatsApp.
+              Cobra con tarjeta, SPEI u OXXO. Tú tienes el control total.
+            </p>
+            <Link href="/crear" className="mt-5 inline-block font-semibold text-brand-600">
+              Crear mi tienda →
+            </Link>
+          </div>
+          <div className="rounded-card border border-accent-400/30 bg-accent-500/5 p-8 shadow-card">
+            <div className="text-3xl">📦</div>
+            <h2 className="mt-4 text-2xl font-bold text-ink">Te lo vendemos</h2>
+            <p className="mt-2 text-muted">
+              ¿Solo quieres vender? Sube tu producto a nuestro marketplace.
+              Nosotros lo mostramos, cobramos y <strong>lo enviamos por ti</strong>.
+              Tú solo recibes tu dinero.
+            </p>
+            <Link href="/marketplace" className="mt-5 inline-block font-semibold text-accent-600">
+              Conocer el marketplace →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Cómo funciona */}
+      <section className="container-tv py-16">
+        <h2 className="text-center text-3xl font-bold text-ink">
+          Así de fácil
+        </h2>
+        <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          {[
+            { n: "1", t: "Cuéntanos de tu negocio", d: "Elige tu giro, un estilo y describe en una frase qué vendes." },
+            { n: "2", t: "La IA arma tu página", d: "En segundos generamos textos, secciones y diseño. Tú solo ajustas." },
+            { n: "3", t: "Publica y vende", d: "Comparte tu link, recibe pedidos por WhatsApp y cobra en línea." },
+          ].map((p) => (
+            <div key={p.n} className="rounded-card bg-brand-50 p-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 font-bold text-white">
+                {p.n}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-20">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">Features</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Job scoring",
-                desc: "Claude scores every job 0–100 based on your CV, role, location, and seniority.",
-              },
-              {
-                title: "Full application kit",
-                desc: "Cover letter, ATS-optimised CV, likely screening questions, and skills gap analysis.",
-              },
-              {
-                title: "Application tracker",
-                desc: "Track every application, posting status, and follow-up in one clean board.",
-              },
-            ].map((f) => (
-              <div key={f.title} className="border border-border rounded-[8px] p-6 bg-surface">
-                <h3 className="font-dm-sans font-medium text-text-primary mb-2">{f.title}</h3>
-                <p className="text-sm text-text-dimmed font-dm-sans font-light">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="border-t border-border py-20">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="font-syne font-bold text-3xl text-text-primary text-center mb-12">Pricing</h2>
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <div className="border border-border rounded-[8px] p-8 bg-surface">
-              <h3 className="font-syne font-bold text-xl text-text-primary mb-2">Free</h3>
-              <p className="font-syne font-bold text-4xl text-text-primary mb-6">$0</p>
-              <ul className="space-y-2 text-sm text-text-dimmed font-dm-sans mb-8">
-                {["5 job refreshes per day", "Job scoring", "Application Preview", "Basic tracker"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <span>—</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth" className="block w-full text-center py-3 border border-border rounded-[8px] text-sm font-dm-sans hover:bg-surface-secondary transition-all duration-[150ms]">
-                Start free
-              </Link>
+              <h3 className="mt-4 text-lg font-semibold text-ink">{p.t}</h3>
+              <p className="mt-1 text-muted">{p.d}</p>
             </div>
-            <div className="border border-btn-bg rounded-[8px] p-8 bg-btn-bg text-btn-text">
-              <h3 className="font-syne font-bold text-xl mb-2">Pro</h3>
-              <p className="font-syne font-bold text-4xl mb-1">$9</p>
-              <p className="text-sm opacity-60 font-dm-sans mb-6">per month</p>
-              <ul className="space-y-2 text-sm opacity-80 font-dm-sans mb-8">
-                {["Everything in Free", "Full application kits", "Cover letter + tailored CV", "Screening answers", "Skills gap analysis", "Follow-up generator"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <span>—</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth" className="block w-full text-center py-3 bg-background text-text-primary rounded-[8px] text-sm font-dm-sans hover:opacity-90 transition-all duration-[150ms]">
-                Get started
-              </Link>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="font-syne font-bold text-text-primary">ApplyPilot</span>
-          <p className="text-sm text-text-dimmed font-dm-sans">© 2025 ApplyPilot. All rights reserved.</p>
+      {/* Giros */}
+      <section className="container-tv py-12">
+        <h2 className="text-center text-2xl font-bold text-ink">
+          Para cualquier tipo de negocio
+        </h2>
+        <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">
+          {GIROS.map((g) => (
+            <span key={g.id} className="chip text-base">
+              <span className="text-xl">{g.emoji}</span> {g.nombre}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section className="container-tv py-16">
+        <div className="rounded-card bg-brand-500 px-8 py-14 text-center shadow-glow">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+            Empieza a vender hoy
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-brand-100">
+            Miles de pymes mexicanas ya están en línea. Tu negocio es el siguiente.
+          </p>
+          <Link
+            href="/crear"
+            className="mt-7 inline-block rounded-pill bg-white px-7 py-3 font-semibold text-brand-700 transition hover:bg-brand-50"
+          >
+            Crear mi página gratis
+          </Link>
+        </div>
+      </section>
+
+      <footer className="border-t border-brand-100 py-8">
+        <div className="container-tv flex flex-col items-center justify-between gap-3 text-sm text-muted sm:flex-row">
+          <span>© {new Date().getFullYear()} Telovendo · telovendo.mx</span>
+          <span>Hecho en México 🇲🇽 para las pymes</span>
         </div>
       </footer>
-    </main>
+    </>
   );
 }

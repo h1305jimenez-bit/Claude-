@@ -8,24 +8,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#ffffff",
-        surface: "#f9f9f9",
-        "surface-secondary": "#f0f0f0",
-        border: "#e5e5e5",
-        "text-primary": "#0d0d0d",
-        "text-dimmed": "#6b6b6b",
-        "btn-bg": "#0d0d0d",
-        "btn-text": "#ffffff",
+        // Marca Telovendo
+        brand: {
+          50: "#f3f1ff",
+          100: "#e9e5ff",
+          200: "#d5ccff",
+          300: "#b6a5ff",
+          400: "#9173ff",
+          500: "#6d3bff", // principal
+          600: "#5b21f0",
+          700: "#4c16cc",
+          800: "#3f15a6",
+          900: "#361685",
+        },
+        accent: {
+          400: "#ffb020",
+          500: "#ff9500", // ámbar de acento
+          600: "#e07b00",
+        },
+        ink: "#15131f",
+        muted: "#6b6780",
       },
       fontFamily: {
-        syne: ["var(--font-syne)", "sans-serif"],
-        "dm-sans": ["var(--font-dm-sans)", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
       borderRadius: {
-        card: "8px",
+        card: "16px",
+        pill: "999px",
       },
-      transitionDuration: {
-        fast: "150ms",
+      boxShadow: {
+        card: "0 8px 30px rgba(21, 19, 31, 0.08)",
+        glow: "0 10px 40px rgba(109, 59, 255, 0.25)",
       },
     },
   },

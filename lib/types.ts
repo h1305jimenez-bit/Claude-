@@ -1,87 +1,117 @@
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  phone: string;
-  linkedin: string;
-  education: string;
-  target_role: string;
-  target_location: string;
-  seniority: string;
-  salary_expectation: string;
-  work_authorization: string;
-  cv_url: string;
-  cv_text: string;
-  plan: "free" | "paid";
-  stripe_customer_id: string;
-  stripe_subscription_id: string;
-  daily_refreshes_used: number;
-  daily_refreshes_reset_at: string | null;
-  created_at: string;
+// Modelo de datos de Telovendo (MVP).
+// En la Fase 1 persistimos en localStorage; estos tipos son el contrato
+// que luego mapeará a tablas de Supabase sin cambiar la forma de los datos.
+
+export type GiroId =
+  | "comida"
+  | "belleza"
+  | "servicios"
+  | "tienda"
+  | "salud"
+  | "otro";
+
+export type EstiloId = "moderno" | "calido" | "minimal" | "vibrante";
+
+export interface Tema {
+  primario: string; // color principal (hex)
+  acento: string; // color de acento (hex)
+  fondo: string; // color de fondo
+  texto: string; // color de texto
 }
 
-export interface ApplicationStep {
-  name: string;
-  detail: string;
-  fields: string[];
+// --- Secciones de la página ---
+export type SeccionTipo =
+  | "hero"
+  | "servicios"
+  | "productos"
+  | "galeria"
+  | "testimonios"
+  | "contacto";
+
+export interface SeccionBase {
+  id: string;
+  tipo: SeccionTipo;
+  visible: boolean;
 }
 
-export interface Job {
-  id: string;
-  user_id: string;
-  adzuna_id: string;
-  company: string;
-  role: string;
-  location: string;
-  score: number;
-  score_rationale: string;
-  portal: string;
-  needs_login: boolean;
-  steps: number;
-  estimated_time: string;
-  status: "new" | "open" | "closing" | "closed";
-  kit_ready: boolean;
-  url: string;
-  description: string;
-  posted_date: string;
-  closed_date: string | null;
-  last_checked: string | null;
-  created_at: string;
-  application_flow?: ApplicationStep[];
-  tip?: string;
+export interface HeroSeccion extends SeccionBase {
+  tipo: "hero";
+  titulo: string;
+  subtitulo: string;
+  cta: string;
 }
 
-export interface Kit {
-  id: string;
-  job_id: string;
-  user_id: string;
-  cover_letter: string;
-  tailored_cv: string;
-  personal_info: Record<string, string>;
-  screening_answers: { question: string; answer: string }[];
-  skills_gap: { skill: string; tip: string }[];
-  preview_data: Record<string, unknown>;
-  generated_at: string;
+export interface ItemServicio {
+  titulo: string;
+  descripcion: string;
+  emoji: string;
 }
 
-export interface Application {
+export interface ServiciosSeccion extends SeccionBase {
+  tipo: "servicios";
+  titulo: string;
+  items: ItemServicio[];
+}
+
+export interface ProductosSeccion extends SeccionBase {
+  tipo: "productos";
+  titulo: string;
+}
+
+export interface GaleriaSeccion extends SeccionBase {
+  tipo: "galeria";
+  titulo: string;
+  emojis: string[];
+}
+
+export interface Testimonio {
+  nombre: string;
+  texto: string;
+}
+
+export interface TestimoniosSeccion extends SeccionBase {
+  tipo: "testimonios";
+  titulo: string;
+  items: Testimonio[];
+}
+
+export interface ContactoSeccion extends SeccionBase {
+  tipo: "contacto";
+  titulo: string;
+  direccion: string;
+  horario: string;
+}
+
+export type Seccion =
+  | HeroSeccion
+  | ServiciosSeccion
+  | ProductosSeccion
+  | GaleriaSeccion
+  | TestimoniosSeccion
+  | ContactoSeccion;
+
+// --- Producto (tienda y/o marketplace) ---
+export interface Producto {
   id: string;
-  user_id: string;
-  job_id: string;
-  kit_id: string | null;
-  company: string;
-  role: string;
-  portal: string;
-  applied_date: string;
-  posting_status: "open" | "closed" | "unknown";
-  application_status:
-    | "applied"
-    | "interviewing"
-    | "offer"
-    | "rejected"
-    | "withdrawn";
-  follow_up_sent: boolean;
-  follow_up_message: string | null;
-  last_checked: string | null;
-  created_at: string;
+  nombre: string;
+  descripcion: string;
+  precio: number; // MXN
+  emoji: string; // imagen-placeholder para el MVP
+  enMarketplace: boolean; // si se vende también en el marketplace de Telovendo
+}
+
+// --- Sitio de un negocio ---
+export interface Sitio {
+  id: string;
+  slug: string;
+  nombreNegocio: string;
+  giro: GiroId;
+  estilo: EstiloId;
+  descripcionNegocio: string;
+  whatsapp: string;
+  tema: Tema;
+  secciones: Seccion[];
+  tiendaActiva: boolean;
+  productos: Producto[];
+  creadoEn: number;
 }
