@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { cambiarEstadoPedido, listarPedidos } from "@/lib/store";
-import { ESTADO_LABEL, mxn } from "@/lib/format";
+import { comisionTelovendo, ESTADO_LABEL, mxn, pagoVendedor } from "@/lib/format";
 import type { EstadoPedido, Pedido } from "@/lib/types";
 
 const ESTADOS: EstadoPedido[] = ["nuevo", "preparando", "enviado", "entregado"];
@@ -82,6 +82,17 @@ export default function PedidosPage() {
                 )}
                 {p.cliente.notas && <div className="text-muted">📝 {p.cliente.notas}</div>}
               </div>
+
+              {p.tipo === "marketplace" && (
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-card bg-green-50 p-2 text-xs">
+                  <span className="font-semibold text-green-700">
+                    💸 Pago al vendedor: {mxn(pagoVendedor(p.total))}
+                  </span>
+                  <span className="text-muted">
+                    Comisión Telovendo (15%): {mxn(comisionTelovendo(p.total))}
+                  </span>
+                </div>
+              )}
 
               {/* Estado */}
               <div className="mt-3 flex flex-wrap gap-2">

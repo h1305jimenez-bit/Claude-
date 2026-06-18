@@ -7,6 +7,7 @@ import SiteRenderer from "@/components/SiteRenderer";
 import { guardarSitio, obtenerSitio } from "@/lib/store";
 import { ESTILOS, estiloDef } from "@/lib/templates";
 import { nuevoId } from "@/lib/generator";
+import { comisionTelovendo, mxn, pagoVendedor } from "@/lib/format";
 import type { EstiloId, HeroSeccion, Producto, Sitio } from "@/lib/types";
 
 export default function EditorPage() {
@@ -232,8 +233,62 @@ export default function EditorPage() {
                       onChange={(e) => setProducto({ ...p, enMarketplace: e.target.checked })}
                       className="h-4 w-4 accent-accent-500"
                     />
-                    📦 Vender en el marketplace (lo enviamos por ti)
+                    📦 Vender en el marketplace (lo vendemos y entregamos)
                   </label>
+
+                  {p.enMarketplace && (
+                    <div className="mt-2 space-y-2 rounded-card border border-accent-400/40 bg-accent-500/5 p-3">
+                      {/* Desglose 85/15 */}
+                      <div className="flex flex-wrap justify-between gap-1 text-xs">
+                        <span className="text-muted">
+                          Cliente paga <strong className="text-ink">{mxn(p.precio)}</strong>
+                        </span>
+                        <span className="text-muted">
+                          Fee 15% <strong className="text-ink">{mxn(comisionTelovendo(p.precio))}</strong>
+                        </span>
+                        <span className="font-semibold text-green-700">
+                          Tú recibes {mxn(pagoVendedor(p.precio))}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <select
+                          className="campo"
+                          value={p.condicion ?? "nuevo"}
+                          onChange={(e) =>
+                            setProducto({ ...p, condicion: e.target.value as Producto["condicion"] })
+                          }
+                        >
+                          <option value="nuevo">Nuevo</option>
+                          <option value="usado">Usado</option>
+                          <option value="hecho_a_mano">Hecho a mano</option>
+                        </select>
+                        <select
+                          className="campo"
+                          value={p.tamano ?? "chico"}
+                          onChange={(e) =>
+                            setProducto({ ...p, tamano: e.target.value as Producto["tamano"] })
+                          }
+                        >
+                          <option value="chico">Chico</option>
+                          <option value="mediano">Mediano</option>
+                          <option value="grande">Grande</option>
+                        </select>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-muted">
+                        Inventario
+                        <input
+                          type="number"
+                          className="campo w-20"
+                          value={p.inventario ?? 1}
+                          min={0}
+                          onChange={(e) =>
+                            setProducto({ ...p, inventario: Number(e.target.value) })
+                          }
+                        />
+                        unidades
+                      </label>
+                    </div>
+                  )}
                 </div>
               ))}
               <button onClick={addProducto} className="btn-ghost w-full py-2 text-sm">
@@ -242,6 +297,35 @@ export default function EditorPage() {
             </div>
           )}
         </Section>
+
+        {/* Datos del vendedor para el marketplace */}
+        {sitio.productos.some((p) => p.enMarketplace) && (
+          <Section titulo="Datos para el marketplace">
+            <p className="-mt-1 text-xs text-muted">
+              Vendemos por ti: pasamos por el producto y lo entregamos al cliente.
+              Te depositamos en cuanto se vende.
+            </p>
+            <Campo label="¿Dónde recogemos los productos?">
+              <input
+                className="campo"
+                placeholder="Calle, número, colonia, ciudad"
+                value={sitio.recoleccion ?? ""}
+                onChange={(e) => actualizar({ ...sitio, recoleccion: e.target.value })}
+              />
+            </Campo>
+            <Campo label="¿A qué cuenta te pagamos? (CLABE)">
+              <input
+                className="campo"
+                placeholder="18 dígitos"
+                inputMode="numeric"
+                value={sitio.cuentaPago ?? ""}
+                onChange={(e) =>
+                  actualizar({ ...sitio, cuentaPago: e.target.value.replace(/[^0-9]/g, "") })
+                }
+              />
+            </Campo>
+          </Section>
+        )}
 
         {/* Secciones */}
         <Section titulo="Secciones visibles">

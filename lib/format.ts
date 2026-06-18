@@ -26,3 +26,16 @@ export const ESTADO_LABEL: Record<string, string> = {
   enviado: "Enviado",
   entregado: "Entregado",
 };
+
+// --- Comisión del marketplace ---
+// El cliente paga el precio de venta. Telovendo retiene 15% y el
+// vendedor recibe el 85%.
+export const COMISION_TELOVENDO = 0.15;
+
+export function comisionTelovendo(precio: number): number {
+  return Math.round(precio * COMISION_TELOVENDO);
+}
+
+export function pagoVendedor(precio: number): number {
+  return precio - comisionTelovendo(precio);
+}

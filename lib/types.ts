@@ -91,13 +91,20 @@ export type Seccion =
   | ContactoSeccion;
 
 // --- Producto (tienda y/o marketplace) ---
+export type CondicionProducto = "nuevo" | "usado" | "hecho_a_mano";
+export type TamanoProducto = "chico" | "mediano" | "grande";
+
 export interface Producto {
   id: string;
   nombre: string;
   descripcion: string;
-  precio: number; // MXN
+  precio: number; // MXN — precio de venta (lo que paga el cliente)
   emoji: string; // imagen-placeholder para el MVP
   enMarketplace: boolean; // si se vende también en el marketplace de Telovendo
+  // Datos extra para el marketplace (Telovendo recoge, vende y entrega):
+  condicion?: CondicionProducto;
+  inventario?: number; // unidades disponibles
+  tamano?: TamanoProducto; // para planear la recolección y entrega
 }
 
 // --- Sitio de un negocio ---
@@ -114,6 +121,9 @@ export interface Sitio {
   tiendaActiva: boolean;
   productos: Producto[];
   creadoEn: number;
+  // Datos del vendedor para el marketplace:
+  recoleccion?: string; // dónde pasamos por los productos
+  cuentaPago?: string; // CLABE / cuenta donde le depositamos
 }
 
 // --- Carrito ---

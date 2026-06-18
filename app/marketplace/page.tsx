@@ -94,7 +94,14 @@ export default function MarketplacePage() {
                     {p.emoji}
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-ink">{p.nombre}</h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-ink">{p.nombre}</h3>
+                      {p.condicion && (
+                        <span className="shrink-0 rounded-pill bg-brand-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-600">
+                          {p.condicion === "hecho_a_mano" ? "hecho a mano" : p.condicion}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 line-clamp-2 text-sm text-muted">{p.descripcion}</p>
                     <p className="mt-1 text-xs text-muted">
                       Vendido por{" "}
