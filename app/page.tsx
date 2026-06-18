@@ -1,10 +1,17 @@
 import Link from "next/link";
+import {
+  CameraIcon,
+  SparklesIcon,
+  ShieldIcon,
+  TruckIcon,
+  UploadIcon,
+} from "@/components/icons";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-brand-100">
+      <header className="sticky top-0 z-20 border-b border-brand-100 bg-white/90 backdrop-blur">
         <div className="container-tv flex items-center justify-between py-4">
           <span className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-lg font-black text-white">
@@ -24,7 +31,9 @@ export default function HomePage() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-200 opacity-40 blur-3xl" />
         <div className="container-tv relative max-w-3xl py-20 text-center sm:py-28">
-          <span className="chip">📸 Vende sin complicarte</span>
+          <span className="inline-flex items-center gap-2 rounded-pill bg-brand-50 px-4 py-1.5 text-sm font-semibold text-brand-700">
+            <CameraIcon className="h-4 w-4" /> Vende sin complicarte
+          </span>
           <h1 className="mx-auto mt-6 text-4xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-6xl">
             Toma una foto.<br />
             <span className="text-brand-500">Nosotros lo vendemos</span> por ti.
@@ -37,10 +46,12 @@ export default function HomePage() {
           </p>
           <div className="mt-9">
             <Link href="/vender" className="btn-primary text-lg">
-              📷 Subir foto y vender
+              <CameraIcon className="h-5 w-5" /> Subir foto y vender
             </Link>
           </div>
-          <p className="mt-4 text-sm text-muted">Gratis subir · Solo pagas 15% cuando se vende</p>
+          <p className="mt-4 text-sm text-muted">
+            Gratis subir · Solo pagas 15% cuando se vende
+          </p>
         </div>
       </section>
 
@@ -48,17 +59,17 @@ export default function HomePage() {
       <section className="container-tv max-w-4xl py-12">
         <div className="grid gap-6 sm:grid-cols-3">
           {[
-            { n: "1", e: "📤", t: "Sube la foto", d: "Una foto de tu producto, desde tu celular." },
-            { n: "2", e: "🤖", t: "La IA hace el trabajo", d: "Identifica qué es y te sugiere 3 precios. Tú eliges." },
-            { n: "3", e: "🚚", t: "Nosotros vendemos", d: "Lo publicamos, recogemos en tu casa y entregamos. Te depositamos tu dinero." },
-          ].map((s) => (
-            <div key={s.n} className="rounded-card bg-brand-50 p-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 font-bold text-white">
-                {s.n}
+            { n: 1, Icon: UploadIcon, t: "Sube la foto", d: "Una foto de tu producto, desde tu celular." },
+            { n: 2, Icon: SparklesIcon, t: "La IA hace el trabajo", d: "Identifica qué es y te sugiere 3 precios. Tú eliges." },
+            { n: 3, Icon: TruckIcon, t: "Nosotros vendemos", d: "Lo publicamos, recogemos en tu casa y entregamos. Te depositamos tu dinero." },
+          ].map(({ n, Icon, t, d }) => (
+            <div key={n} className="relative rounded-card border border-brand-100 bg-white p-6 shadow-card">
+              <span className="absolute right-4 top-4 text-sm font-bold text-brand-200">0{n}</span>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <Icon className="h-6 w-6" />
               </div>
-              <div className="mt-4 text-3xl">{s.e}</div>
-              <h3 className="mt-2 text-lg font-semibold text-ink">{s.t}</h3>
-              <p className="mt-1 text-muted">{s.d}</p>
+              <h3 className="mt-4 text-lg font-semibold text-ink">{t}</h3>
+              <p className="mt-1 text-muted">{d}</p>
             </div>
           ))}
         </div>
@@ -67,7 +78,10 @@ export default function HomePage() {
       {/* Sin riesgo */}
       <section className="container-tv max-w-3xl py-12">
         <div className="rounded-card bg-brand-500 px-8 py-12 text-center shadow-glow">
-          <h2 className="text-3xl font-bold text-white">Vende sin riesgo</h2>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-white">
+            <ShieldIcon className="h-7 w-7" />
+          </div>
+          <h2 className="mt-4 text-3xl font-bold text-white">Vende sin riesgo</h2>
           <p className="mx-auto mt-3 max-w-xl text-brand-100">
             No te mueves de casa. Cuando tu producto se vende, te depositamos el
             85% y apenas entonces pasamos por él. Tú no te preocupas por nada.
@@ -83,7 +97,7 @@ export default function HomePage() {
 
       <footer className="border-t border-brand-100 py-8">
         <div className="container-tv text-center text-sm text-muted">
-          © {new Date().getFullYear()} Telovendo · telovendo.mx · Hecho en México 🇲🇽
+          © {new Date().getFullYear()} Telovendo · telovendo.mx · Hecho en México
         </div>
       </footer>
     </main>

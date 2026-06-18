@@ -4,6 +4,13 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { mxn, pagoVendedor, generarFolio } from "@/lib/format";
 import type { Identificacion, SugerenciaPrecio } from "@/lib/identify";
+import {
+  CameraIcon,
+  CheckCircleIcon,
+  SparklesIcon,
+  TruckIcon,
+  UploadIcon,
+} from "@/components/icons";
 
 type Paso = "inicio" | "identificando" | "resultado" | "listo";
 
@@ -104,14 +111,16 @@ export default function VenderPage() {
             <h1 className="text-3xl font-extrabold text-ink">Toma una foto y nosotros lo vendemos</h1>
             <p className="mt-2 text-muted">
               Sube la foto de tu producto. La inteligencia artificial lo identifica
-              y te sugiere el precio. Tú solo eliges. 📸
+              y te sugiere el precio. Tú solo eliges.
             </p>
 
             <button
               onClick={() => inputRef.current?.click()}
               className="mt-8 flex w-full flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed border-brand-300 bg-white py-16 transition hover:border-brand-500 hover:bg-brand-50"
             >
-              <span className="text-5xl">📷</span>
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
+                <CameraIcon className="h-8 w-8" />
+              </span>
               <span className="text-lg font-semibold text-brand-700">Subir o tomar foto</span>
               <span className="text-sm text-muted">JPG o PNG</span>
             </button>
@@ -129,13 +138,15 @@ export default function VenderPage() {
 
             <div className="mt-8 grid grid-cols-3 gap-3 text-sm">
               {[
-                { e: "📤", t: "Subes la foto" },
-                { e: "🤖", t: "La IA la identifica y pone precio" },
-                { e: "🚚", t: "Nosotros vendemos y entregamos" },
-              ].map((s) => (
-                <div key={s.t} className="rounded-card bg-white p-3">
-                  <div className="text-2xl">{s.e}</div>
-                  <div className="mt-1 text-muted">{s.t}</div>
+                { Icon: UploadIcon, t: "Subes la foto" },
+                { Icon: SparklesIcon, t: "La IA la identifica y pone precio" },
+                { Icon: TruckIcon, t: "Nosotros vendemos y entregamos" },
+              ].map(({ Icon, t }) => (
+                <div key={t} className="rounded-card border border-brand-100 bg-white p-4">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="mt-2 text-muted">{t}</div>
                 </div>
               ))}
             </div>
@@ -234,8 +245,8 @@ export default function VenderPage() {
         {/* PASO 4: listo */}
         {paso === "listo" && info && precioElegido && (
           <div className="text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl">
-              ✅
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <CheckCircleIcon className="h-9 w-9" />
             </div>
             <h1 className="mt-4 text-3xl font-bold text-ink">¡Listo! Nosotros nos encargamos</h1>
             <p className="mt-2 text-muted">
