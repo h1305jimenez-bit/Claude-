@@ -250,9 +250,11 @@ export default function VenderPage() {
             </div>
             <h1 className="mt-4 text-3xl font-bold text-ink">¡Listo! Nosotros nos encargamos</h1>
             <p className="mt-2 text-muted">
-              Recibimos <strong className="text-ink">{info.nombre}</strong>. Te
-              escribimos por WhatsApp para coordinar la recolección. Cuando se
-              venda, te depositamos <strong className="text-ink">{mxn(pagoVendedor(precioElegido.monto))}</strong>.
+              Publicamos <strong className="text-ink">{info.nombre}</strong> por ti.
+              En cuanto se venda, te depositamos{" "}
+              <strong className="text-ink">{mxn(pagoVendedor(precioElegido.monto))}</strong>{" "}
+              y <strong className="text-ink">pasamos por él a tu casa</strong>.
+              Te avisamos por WhatsApp en cada paso.
             </p>
             <div className="mt-6 rounded-card border border-brand-100 bg-white p-5 text-left">
               <div className="flex justify-between"><span className="text-muted">Folio</span><span className="font-mono font-bold text-brand-600">{folio}</span></div>

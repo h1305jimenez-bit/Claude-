@@ -1,10 +1,12 @@
 import Link from "next/link";
 import {
   CameraIcon,
+  HomeIcon,
   SparklesIcon,
   ShieldIcon,
   TruckIcon,
   UploadIcon,
+  WalletIcon,
 } from "@/components/icons";
 
 export default function HomePage() {
@@ -39,11 +41,32 @@ export default function HomePage() {
             <span className="text-brand-500">Nosotros lo vendemos</span> por ti.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-muted">
-            Sube la foto de lo que quieras vender. La inteligencia artificial
-            identifica qué es y te sugiere el precio. Tú eliges y nosotros nos
-            encargamos de todo lo demás: lo vendemos, lo recogemos en tu casa y
-            lo entregamos al cliente.
+            Sube una foto y la inteligencia artificial identifica qué es y le
+            pone precio. Tú eliges, y nosotros nos encargamos de todo lo demás.
           </p>
+
+          {/* Puntos fuertes */}
+          <div className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-card border border-brand-100 bg-white p-4 text-left shadow-card">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-600">
+                <WalletIcon className="h-6 w-6" />
+              </span>
+              <div>
+                <div className="font-bold text-ink">Te pagamos al venderse</div>
+                <div className="text-sm text-muted">En cuanto se vende, tu dinero a tu cuenta.</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-card border border-brand-100 bg-white p-4 text-left shadow-card">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
+                <HomeIcon className="h-6 w-6" />
+              </span>
+              <div>
+                <div className="font-bold text-ink">Vamos por él a tu casa</div>
+                <div className="text-sm text-muted">No te mueves. Lo recogemos en tu domicilio.</div>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-9">
             <Link href="/vender" className="btn-primary text-lg">
               <CameraIcon className="h-5 w-5" /> Subir foto y vender
@@ -81,10 +104,12 @@ export default function HomePage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-white">
             <ShieldIcon className="h-7 w-7" />
           </div>
-          <h2 className="mt-4 text-3xl font-bold text-white">Vende sin riesgo</h2>
+          <h2 className="mt-4 text-3xl font-bold text-white">Primero te pagamos</h2>
           <p className="mx-auto mt-3 max-w-xl text-brand-100">
-            No te mueves de casa. Cuando tu producto se vende, te depositamos el
-            85% y apenas entonces pasamos por él. Tú no te preocupas por nada.
+            Cuando tu producto se vende, te depositamos el 85% a tu cuenta y{" "}
+            <strong className="text-white">apenas entonces</strong> pasamos por
+            él a tu casa para entregarlo al cliente. Cero riesgo: nunca sueltas
+            tu producto sin tener tu dinero.
           </p>
           <Link
             href="/vender"
