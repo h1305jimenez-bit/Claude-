@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/AppShell";
 import { listarMarketplace, type ProductoMarketplace } from "@/lib/store";
 
 function mxn(n: number): string {
@@ -23,9 +23,7 @@ export default function MarketplacePage() {
   }, []);
 
   return (
-    <>
-      <Navbar />
-
+    <AppShell>
       {/* Banner explicativo */}
       <section className="bg-accent-500/10">
         <div className="container-tv py-12 text-center">
@@ -104,6 +102,6 @@ export default function MarketplacePage() {
           </>
         )}
       </main>
-    </>
+    </AppShell>
   );
 }

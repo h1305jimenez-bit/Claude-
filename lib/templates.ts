@@ -27,8 +27,8 @@ export const ESTILOS: EstiloDef[] = [
   {
     id: "moderno",
     nombre: "Moderno",
-    descripcion: "Limpio, profesional, tonos morados.",
-    tema: { primario: "#6d3bff", acento: "#ff9500", fondo: "#ffffff", texto: "#15131f" },
+    descripcion: "Limpio y profesional, azul confiable.",
+    tema: { primario: "#1877f2", acento: "#ff9500", fondo: "#ffffff", texto: "#15131f" },
   },
   {
     id: "calido",

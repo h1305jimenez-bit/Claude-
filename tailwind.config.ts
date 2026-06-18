@@ -8,18 +8,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Marca Telovendo
+        // Marca Telovendo — azul estilo Facebook
         brand: {
-          50: "#f3f1ff",
-          100: "#e9e5ff",
-          200: "#d5ccff",
-          300: "#b6a5ff",
-          400: "#9173ff",
-          500: "#6d3bff", // principal
-          600: "#5b21f0",
-          700: "#4c16cc",
-          800: "#3f15a6",
-          900: "#361685",
+          50: "#eaf2ff",
+          100: "#d9e7ff",
+          200: "#b3cfff",
+          300: "#80b0ff",
+          400: "#4a90ff",
+          500: "#1877f2", // principal (azul Facebook)
+          600: "#0f66d9",
+          700: "#0c52b0",
+          800: "#0d4694",
+          900: "#0f3b78",
         },
         accent: {
           400: "#ffb020",
@@ -39,7 +39,7 @@ const config: Config = {
       },
       boxShadow: {
         card: "0 8px 30px rgba(21, 19, 31, 0.08)",
-        glow: "0 10px 40px rgba(109, 59, 255, 0.25)",
+        glow: "0 10px 40px rgba(24, 119, 242, 0.28)",
       },
     },
   },
