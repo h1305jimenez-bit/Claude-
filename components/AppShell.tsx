@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { conteoCarrito, leerCarrito } from "@/lib/store";
 
 interface NavItem {
   href: string;
@@ -14,9 +15,39 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/crear", label: "Crear sitio", icon: "✨", primary: true },
   { href: "/dashboard", label: "Mis sitios", icon: "🏪" },
+  { href: "/dashboard/pedidos", label: "Pedidos", icon: "📋" },
   { href: "/marketplace", label: "Marketplace", icon: "📦" },
   { href: "/", label: "Inicio", icon: "🏠" },
 ];
+
+function CarritoLink({ onNavigate }: { onNavigate?: () => void }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const sync = () => setN(conteoCarrito(leerCarrito()));
+    sync();
+    window.addEventListener("carrito-actualizado", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("carrito-actualizado", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+  if (n === 0) return null;
+  return (
+    <Link
+      href="/checkout"
+      onClick={onNavigate}
+      className="flex items-center justify-between rounded-xl border border-brand-200 bg-white px-3 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
+    >
+      <span className="flex items-center gap-2">
+        <span className="text-lg">🛒</span> Carrito
+      </span>
+      <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-500 px-1.5 text-xs text-white">
+        {n}
+      </span>
+    </Link>
+  );
+}
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -80,8 +111,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Logo />
         </div>
         <NavList />
-        <div className="mt-auto px-1 text-xs text-muted">
-          © {new Date().getFullYear()} Telovendo · telovendo.mx
+        <div className="mt-auto flex flex-col gap-3">
+          <CarritoLink />
+          <div className="px-1 text-xs text-muted">
+            © {new Date().getFullYear()} Telovendo · telovendo.mx
+          </div>
         </div>
       </aside>
 
@@ -121,6 +155,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <NavList onNavigate={() => setOpen(false)} />
+            <div className="mt-auto">
+              <CarritoLink onNavigate={() => setOpen(false)} />
+            </div>
           </aside>
         </div>
       )}

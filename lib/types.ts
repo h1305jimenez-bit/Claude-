@@ -115,3 +115,46 @@ export interface Sitio {
   productos: Producto[];
   creadoEn: number;
 }
+
+// --- Carrito ---
+export interface ItemCarrito {
+  productoId: string;
+  sitioId: string; // negocio dueño del producto
+  negocio: string;
+  slug: string;
+  nombre: string;
+  precio: number;
+  emoji: string;
+  cantidad: number;
+  // "tienda" = se compra en la tienda del negocio (entrega por el negocio)
+  // "marketplace" = lo vende y envía Telovendo
+  tipo: "tienda" | "marketplace";
+}
+
+// --- Pedidos ---
+export type EstadoPedido = "nuevo" | "preparando" | "enviado" | "entregado";
+
+export interface DatosCliente {
+  nombre: string;
+  telefono: string;
+  // Envío: requerido para pedidos de marketplace (Telovendo envía)
+  direccion?: string;
+  ciudad?: string;
+  cp?: string;
+  notas?: string;
+}
+
+export interface Pedido {
+  id: string;
+  folio: string; // legible, ej. TV-2X9K
+  tipo: "tienda" | "marketplace";
+  sitioId: string; // negocio vendedor
+  negocio: string;
+  slug: string;
+  items: ItemCarrito[];
+  total: number;
+  cliente: DatosCliente;
+  estado: EstadoPedido;
+  creadoEn: number;
+}
+

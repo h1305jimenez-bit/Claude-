@@ -53,9 +53,9 @@ export default function HomePage() {
             <div className="text-3xl">📦</div>
             <h2 className="mt-4 text-2xl font-bold text-ink">Te lo vendemos</h2>
             <p className="mt-2 text-muted">
-              ¿Solo quieres vender? Sube tu producto a nuestro marketplace.
-              Nosotros lo mostramos, cobramos y <strong>lo enviamos por ti</strong>.
-              Tú solo recibes tu dinero.
+              ¿Solo quieres vender? Súbelo al marketplace. Cuando se venda,{" "}
+              <strong>primero te pagamos</strong> y luego pasamos a tu casa por
+              el producto para entregarlo al cliente. Tú no te preocupas por nada.
             </p>
             <Link href="/marketplace" className="mt-5 inline-block font-semibold text-accent-600">
               Conocer el marketplace →

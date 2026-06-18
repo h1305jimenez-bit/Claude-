@@ -3,24 +3,37 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
-import { listarMarketplace, type ProductoMarketplace } from "@/lib/store";
-
-function mxn(n: number): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+import {
+  agregarAlCarrito,
+  listarMarketplace,
+  type ProductoMarketplace,
+} from "@/lib/store";
+import { mxn } from "@/lib/format";
 
 export default function MarketplacePage() {
   const [productos, setProductos] = useState<ProductoMarketplace[]>([]);
   const [cargado, setCargado] = useState(false);
+  const [agregado, setAgregado] = useState<string | null>(null);
 
   useEffect(() => {
     setProductos(listarMarketplace());
     setCargado(true);
   }, []);
+
+  function comprar(p: ProductoMarketplace) {
+    agregarAlCarrito({
+      productoId: p.id,
+      sitioId: p.sitioId,
+      negocio: p.negocio,
+      slug: p.slug,
+      nombre: p.nombre,
+      precio: p.precio,
+      emoji: p.emoji,
+      tipo: "marketplace",
+    });
+    setAgregado(p.id);
+    setTimeout(() => setAgregado((cur) => (cur === p.id ? null : cur)), 1500);
+  }
 
   return (
     <AppShell>
@@ -29,12 +42,19 @@ export default function MarketplacePage() {
         <div className="container-tv py-12 text-center">
           <span className="chip bg-accent-500/20 text-accent-600">📦 Marketplace Telovendo</span>
           <h1 className="mx-auto mt-4 max-w-2xl text-3xl font-extrabold text-ink sm:text-4xl">
-            Productos de pymes mexicanas, enviados por nosotros
+            Vende sin riesgo. Sin moverte de casa.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-muted">
-            ¿Tienes un producto? Súbelo y nosotros lo mostramos, cobramos y lo
-            enviamos por ti. Tú solo recibes tu dinero.
+            Súbelo al marketplace. Cuando se venda,{" "}
+            <strong className="text-ink">primero recibes tu dinero</strong> y
+            apenas entonces pasamos a tu casa por el producto para entregarlo al
+            cliente. 🚚
           </p>
+          <div className="mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-2 text-sm">
+            <span className="chip bg-white">1 · 📤 Súbelo</span>
+            <span className="chip bg-white">2 · 💸 Se vende y te pagamos</span>
+            <span className="chip bg-white">3 · 🚚 Pasamos por él y lo entregamos</span>
+          </div>
           <Link href="/crear" className="btn-primary mt-6">
             Vender mi producto
           </Link>
@@ -85,14 +105,14 @@ export default function MarketplacePage() {
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-lg font-bold text-brand-600">{mxn(p.precio)}</span>
                       <button
-                        className="rounded-pill bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-                        onClick={() =>
-                          alert(
-                            "El carrito y el pago con Mercado Pago llegan en la Fase 3 🚧"
-                          )
-                        }
+                        className={`rounded-pill px-4 py-2 text-sm font-semibold text-white transition ${
+                          agregado === p.id
+                            ? "bg-green-600"
+                            : "bg-brand-500 hover:bg-brand-600"
+                        }`}
+                        onClick={() => comprar(p)}
                       >
-                        Comprar
+                        {agregado === p.id ? "✓ Agregado" : "Agregar 🛒"}
                       </button>
                     </div>
                   </div>

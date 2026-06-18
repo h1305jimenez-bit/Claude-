@@ -1,19 +1,17 @@
 import type { Sitio } from "@/lib/types";
+import { mxn, waLink } from "@/lib/format";
+import AddToCartButton from "@/components/cart/AddToCartButton";
+import CartBar from "@/components/cart/CartBar";
 
-function mxn(n: number): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function waLink(numero: string, mensaje: string): string {
-  const n = numero.replace(/[^0-9]/g, "");
-  return `https://wa.me/${n}?text=${encodeURIComponent(mensaje)}`;
-}
-
-export default function SiteRenderer({ sitio }: { sitio: Sitio }) {
+// `interactivo` activa el carrito (página pública). En el editor (preview)
+// los botones de compra se muestran pero no agregan al carrito.
+export default function SiteRenderer({
+  sitio,
+  interactivo = false,
+}: {
+  sitio: Sitio;
+  interactivo?: boolean;
+}) {
   const t = sitio.tema;
   const wa = sitio.whatsapp
     ? waLink(sitio.whatsapp, `Hola ${sitio.nombreNegocio}, vi su página y me interesa.`)
@@ -117,15 +115,37 @@ export default function SiteRenderer({ sitio }: { sitio: Sitio }) {
                           <p className="mt-1 text-sm" style={{ opacity: 0.7 }}>
                             {p.descripcion}
                           </p>
+                          {interactivo ? (
+                            <AddToCartButton
+                              color={t.primario}
+                              item={{
+                                productoId: p.id,
+                                sitioId: sitio.id,
+                                negocio: sitio.nombreNegocio,
+                                slug: sitio.slug,
+                                nombre: p.nombre,
+                                precio: p.precio,
+                                emoji: p.emoji,
+                                tipo: "tienda",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="mt-3 block rounded-pill py-2 text-center text-sm font-semibold text-white opacity-90"
+                              style={{ background: t.primario }}
+                            >
+                              Agregar al carrito
+                            </div>
+                          )}
                           {wa && (
                             <a
                               href={waLink(sitio.whatsapp, `Hola, quiero pedir: ${p.nombre} (${mxn(p.precio)})`)}
                               target="_blank"
                               rel="noreferrer"
-                              className="mt-3 block rounded-pill py-2 text-center text-sm font-semibold text-white"
-                              style={{ background: t.primario }}
+                              className="mt-2 block text-center text-xs font-medium"
+                              style={{ color: t.primario }}
                             >
-                              Pedir por WhatsApp
+                              o pídelo por WhatsApp
                             </a>
                           )}
                         </div>
@@ -214,12 +234,16 @@ export default function SiteRenderer({ sitio }: { sitio: Sitio }) {
           target="_blank"
           rel="noreferrer"
           aria-label="WhatsApp"
-          className="fixed bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full text-2xl text-white shadow-lg"
+          className={`fixed right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full text-2xl text-white shadow-lg ${
+            interactivo ? "bottom-24" : "bottom-5"
+          }`}
           style={{ background: "#25D366" }}
         >
           💬
         </a>
       )}
+
+      {interactivo && <CartBar color={t.primario} />}
     </div>
   );
 }

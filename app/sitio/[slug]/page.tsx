@@ -33,5 +33,5 @@ export default function SitioPublicoPage() {
   }
   if (!sitio) return null;
 
-  return <SiteRenderer sitio={sitio} />;
+  return <SiteRenderer sitio={sitio} interactivo />;
 }

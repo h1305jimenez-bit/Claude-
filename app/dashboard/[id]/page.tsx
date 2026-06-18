@@ -14,6 +14,7 @@ export default function EditorPage() {
   const [sitio, setSitio] = useState<Sitio | null>(null);
   const [cargado, setCargado] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const [reclamada, setReclamada] = useState(false);
 
   useEffect(() => {
     setSitio(obtenerSitio(params.id) ?? null);
@@ -262,6 +263,31 @@ export default function EditorPage() {
 
       {/* Vista previa */}
       <main className="flex-1 bg-brand-50/40 p-3 lg:h-screen lg:overflow-y-auto lg:p-6">
+        {/* Aviso: preview + 24 h + $99 */}
+        <div className="mx-auto mb-4 max-w-4xl rounded-card border border-accent-400/50 bg-accent-500/10 p-4">
+          {reclamada ? (
+            <p className="text-center text-sm font-medium text-ink">
+              🎉 ¡Listo! Apartaste tu página. Te confirmamos por WhatsApp en las
+              próximas <strong>24 horas</strong>. La suscripción de $29 al mes se
+              cobra al publicar (lo conectamos con Mercado Pago muy pronto).
+            </p>
+          ) : (
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+              <p className="text-sm text-ink">
+                ✨ <strong>Esta es tu vista previa.</strong> En 24 h confirmamos
+                tu página. Si te la quieres quedar, son{" "}
+                <strong className="text-accent-600">$29 al mes</strong>.
+              </p>
+              <button
+                onClick={() => setReclamada(true)}
+                className="shrink-0 rounded-pill bg-accent-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-accent-600"
+              >
+                Quedármela · $29/mes
+              </button>
+            </div>
+          )}
+        </div>
+
         <p className="mb-3 text-center text-sm text-muted">Vista previa en vivo</p>
         <div className="mx-auto max-w-4xl overflow-hidden rounded-card border border-brand-100 bg-white shadow-card">
           <SiteRenderer sitio={sitio} />
